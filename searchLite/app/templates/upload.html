@@ -20,8 +20,70 @@
             align-items: center;
             flex-direction: column; 
         }
+        #upload-container {
+            width: 40%;
+            height: 40%;
+            padding: 20px;
+            background-color: transparent; 
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Apply box shadow */ 
+            border: 3px dashed #666;           
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+
+        #upload-icon {
+            font-size: 20px;
+            color: #666;
+            width: 30px;
+            display: flex;
+            justify-content: center; 
+            align-items: center; 
+            margin-bottom: 0px;
+        }
+
+        #upload-text {
+            font-size: 18px;
+            font-weight: bold;
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        h4 {
+            margin: 10px 0; 
+        }
+
+        #file-input {
+            display: none;
+        }
+
+        #choose-file-btn {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #333;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+        }
     </style>
 </head>
 <body>
+    <h1 style="font-family: 'Dancing Script' , cursive; font-size: 8vh; margin-bottom: 5px;">Upload Files</h1>
+    <div id="upload-container">
+        <div id="upload-icon" style="padding-top: 25px;">
+            <img src="{% static 'upload.png' %}" alt="Upload Icon" style="width: 150px;">
+        </div>
+        <p id="upload-text" style="padding-top: -35px;">Drag & Drop files here</p>
+        <h4>or</h4>
+        <input type="file" id="file-input" multiple>
+        <div>
+            <button id="choose-file-btn" onclick="document.getElementById('file-input').click()">Choose a file</button>
+            <button id="choose-file-btn" onclick="document.getElementById('file-input').click()">Upload file</button>
+        </div>
+    </div>
     
 </body>
