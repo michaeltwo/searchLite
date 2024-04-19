@@ -72,7 +72,7 @@
     </style>
 </head>
 <body>
-    <h1 style="font-family: 'Dancing Script' , cursive; font-size: 8vh; margin-bottom: 5px;">Upload Files</h1>
+    <h1 style="font-family: 'Dancing Script' , cursive; font-size: 8vh; margin-bottom: 5px; margin-top: -15px;">Upload Files</h1>
     <div id="upload-container">
         <div id="upload-icon" style="padding-top: 25px;">
             <img src="{% static 'upload.png' %}" alt="Upload Icon" style="width: 150px;">
@@ -84,6 +84,8 @@
             <button id="choose-file-btn" onclick="document.getElementById('file-input').click()">Choose a file</button>
             <button id="choose-file-btn" onclick="document.getElementById('file-input').click()">Upload file</button>
         </div>
+        <ul id="file-list"></ul>
     </div>
     
 </body>
+</html>
