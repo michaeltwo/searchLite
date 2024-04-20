@@ -60,7 +60,7 @@
             display: none;
         }
 
-        #choose-file-btn {
+        .choose-file-btn {
             padding: 10px 20px;
             font-size: 16px;
             background-color: #333;
@@ -79,11 +79,14 @@
         </div>
         <p id="upload-text" style="padding-top: -35px;">Drag & Drop files here</p>
         <h4>or</h4>
-        <input type="file" id="file-input" multiple>
-        <div>
-            <button id="choose-file-btn" onclick="document.getElementById('file-input').click()">Choose a file</button>
-            <button id="choose-file-btn" onclick="document.getElementById('file-input').click()">Upload file</button>
-        </div>
+        <form method="post" action="{% url 'upload' %}" enctype="multipart/form-data">
+            {% csrf_token %}
+            <input class="choose-file-btn" type="file" name="file" accept=".jpg, .jpeg, .bmp, .doc, .docx, .csv, .pdf, .txt" multiple>
+            <button class="choose-file-btn" type="submit">Upload</button>
+        </form>
+        {% if message %}
+        <p>{{ message }}</p>
+        {% endif %}
         <ul id="file-list"></ul>
     </div>
     

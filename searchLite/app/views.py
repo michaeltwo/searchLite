@@ -15,34 +15,47 @@ def homepage(request):
 
 
 def upload(request):
-    if request.method == 'POST' and request.FILES['file']:
-        file = request.FILES['file']
-        file_info = filetype.guess(file.read())
-        if file_info is not None and file_info.mime in ALLOWED_FILE_TYPES:
-            file_hash = generate_file_hash(file_path)
-            if file_hash:
-                timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
-                stored_file_name = f"{file.name}_{timestamp}"
-                file_path = os.path.join(settings.BASE_DIR, 'corpus', stored_file_name)
-                if not CorpusFile.objects.filter(file_hash=file_hash).exists():
-                    with open(file_path, 'wb+') as destination:
-                        for chunk in file.chunks():
-                            destination.write(chunk)
-                    uploaded_file = CorpusFile(
-                        uploaded_file_name=file.name,
-                        stored_file_name=stored_file_name,
-                        file_type=file_info.mime,
-                        file_size=file.size,
-                        file_hash=file_hash
-                    )
-                    uploaded_file.save()
-                    return render(request, 'upload.html', {'message': 'File uploaded successfully'})
+    valid_files = []
+    invalid_files = []
+    
+    if request.method == 'POST' and request.FILES.getlist('file'):
+        files = request.FILES.getlist('file')
+        for file in files:
+            file_info = filetype.guess(file.read())
+            if file_info is not None and file_info.mime in ALLOWED_FILE_TYPES:
+                file_hash = generate_file_hash(file)
+                if file_hash:
+                    if not CorpusFile.objects.filter(file_hash=file_hash).exists():
+                        timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+                        stored_file_name = f"{file.name}_{timestamp}"
+                        file_path = os.path.join(settings.BASE_DIR, 'corpus', stored_file_name)
+                        with open(file_path, 'wb+') as destination:
+                            for chunk in file.chunks():
+                                destination.write(chunk)
+                        uploaded_file = CorpusFile(
+                            uploaded_file_name=file.name,
+                            stored_file_name=stored_file_name,
+                            file_type=file_info.mime,
+                            file_size=file.size,
+                            file_hash=file_hash
+                        )
+                        uploaded_file.save()
+                        valid_files.append(file.name)
+                    else:
+                        invalid_files.append(f"{file.name} (duplicate file)")
                 else:
-                    return render(request, 'upload.html', {'message': 'File already exists.'})
+                    invalid_files.append(f"{file.name} (error generating hash)")
             else:
-                return render(request, 'upload.html', {'message': 'Error generating file hash.'})
-        else:
-            return render(request, 'upload.html', {'message': 'Invalid file type. Only JPG, JPEG, BMP, DOC, DOCX, CSV, PDF, and TXT files are allowed.'})
+                invalid_files.append(f"{file.name} (invalid file type)")
+        
+        message = ''
+        if valid_files:
+            message += f"Files uploaded successfully: {', '.join(valid_files)}. "
+        if invalid_files:
+            message += f"Invalid files: {', '.join(invalid_files)}"
+        
+        return render(request, 'upload.html', {'message': message})
+    
     return render(request, 'upload.html')
 
 
@@ -51,12 +64,11 @@ def search(request):
     return render(request, 'search.html')  
 
 
-def generate_file_hash(file_path):
+def generate_file_hash(file):
     try:
-        with open(file_path, 'rb') as file:
-            file_content = file.read()
-            file_hash = hashlib.sha256(file_content).hexdigest()
-            return file_hash
-    except FileNotFoundError:
-        print(f"Error: '{file_path}' not found.")
+        file_content = file.read()
+        file_hash = hashlib.sha256(file_content).hexdigest()
+        return file_hash
+    except Exception as e:
+        print(f"Error generating file hash: {e}")
         return None
