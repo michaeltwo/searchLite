@@ -9,8 +9,6 @@ import hashlib
 import os
 
 def homepage(request):
-    # Perform your search logic here
-    # For demonstration purposes, we'll just return the query
     return render(request, 'index.html')
 
 
