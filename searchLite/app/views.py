@@ -70,3 +70,7 @@ def generate_file_hash(file):
     except Exception as e:
         print(f"Error generating file hash: {e}")
         return None
+    
+
+def results(request):
+    return render(request, 'results.html')

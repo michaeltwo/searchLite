@@ -32,7 +32,7 @@
         }
 
         .search-input {
-            flex: 1; /* Take up remaining space */
+            flex: 1; 
             padding: 10px;
             font-size: 16px;
             border: none;
@@ -59,8 +59,10 @@
 <body>
     <h1 style="max-width: 100%; font-family: 'Dancing Script' , cursive; font-size: 10vh; margin-top: -60px; margin-bottom: 10px;">Search for it!</h1>
     <div class="search-container">
-        <input type="text" class="search-input" placeholder="Enter your search query...">
-        <button class="search-button">Search</button>
+        <form action="{% url 'results' %}" method="get" target="_blank">
+            <input type="text" class="search-input" placeholder="Enter your search query..." style="width: 90vh;">
+            <button class="search-button">Search</button>
+        </form>
     </div>
 </body>
 </html>
