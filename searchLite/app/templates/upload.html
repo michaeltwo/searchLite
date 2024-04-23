@@ -56,39 +56,99 @@
             margin: 10px 0; 
         }
 
-        #file-input {
-            display: none;
-        }
-
         .choose-file-btn {
             padding: 10px 20px;
-            font-size: 16px;
+            font-size: 14px;
             background-color: #333;
             color: #fff;
             border: none;
             cursor: pointer;
             border-radius: 5px;
         }
+
+        .drop-zone--over {
+        border-style: solid;
+        }
+
+        .drop-zone__thumb {
+        width: 100%;
+        height: 100%;
+        border-radius: 10px;
+        overflow: hidden;
+        background-color: #cccccc;
+        background-size: cover;
+        position: relative;
+        }
+
+        .drop-zone__thumb::after {
+        content: attr(data-label);
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        padding: 5px 0;
+        color: #ffffff;
+        background: rgba(0, 0, 0, 0.75);
+        font-size: 14px;
+        text-align: center;
+        }
+
     </style>
 </head>
 <body>
     <h1 style="font-family: 'Dancing Script' , cursive; font-size: 8vh; margin-bottom: 5px; margin-top: -15px;">Upload Files</h1>
-    <div id="upload-container">
+    <div id="upload-container" class="drop-zone">
         <div id="upload-icon" style="padding-top: 25px;">
             <img src="{% static 'upload.png' %}" alt="Upload Icon" style="width: 150px;">
         </div>
-        <p id="upload-text" style="padding-top: -35px;">Drag & Drop files here</p>
-        <h4>or</h4>
-        <form method="post" action="{% url 'upload' %}" enctype="multipart/form-data">
-            {% csrf_token %}
-            <input class="choose-file-btn" type="file" name="file" accept=".jpg, .jpeg, .bmp, .doc, .docx, .csv, .pdf, .txt" multiple>
-            <button class="choose-file-btn" type="submit">Upload</button>
-        </form>
+            <p id="upload-text" style="padding-top: -35px;">Drag & Drop files here</p>
+            <span class="drop-zone__prompt"></span>    
+            <h4>or</h4>
+            <form method="post" action="{% url 'upload' %}" enctype="multipart/form-data">
+                {% csrf_token %}
+                <input id="file-input" class="choose-file-btn" type="file" name="file" accept=".jpg, .jpeg, .bmp, .doc, .docx, .csv, .pdf, .txt" multiple>
+                <button class="choose-file-btn" type="submit" style="height: 42px;">Upload</button>
+            </form>
         {% if message %}
         <p>{{ message }}</p>
         {% endif %}
         <ul id="file-list"></ul>
     </div>
     
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+        const dropZone = document.querySelector(".drop-zone");
+        const fileInput = document.getElementById("file-input");
+
+        dropZone.addEventListener("dragover", function (e) {
+            e.preventDefault(); // Prevent default behavior (Prevent file from being opened)
+            dropZone.classList.add("drop-zone--over");
+        });
+
+        ["dragleave", "dragend", "drop"].forEach(type => {
+            dropZone.addEventListener(type, function (e) {
+                dropZone.classList.remove("drop-zone--over");
+            });
+        });
+
+        dropZone.addEventListener("drop", function (e) {
+            e.preventDefault(); // This stops the file from being opened if dropped outside of the drop zone
+
+            if (e.dataTransfer.files.length) {
+                fileInput.files = e.dataTransfer.files; // As mentioned earlier, this doesn't work due to security reasons in JavaScript
+                // Display the filename or handle the files as needed
+                console.log("Dropped file:", e.dataTransfer.files[0].name);
+            }
+        });
+
+        fileInput.addEventListener("change", function () {
+            if (this.files.length) {
+                console.log("File chosen via input:", this.files[0].name);
+            }
+        });
+    });
+
+    </script>
 </body>
 </html>

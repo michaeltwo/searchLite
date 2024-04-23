@@ -1,0 +1,70 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Search Engine</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-image: url("{% static 'slidedown.jpg' %}");
+            background-size: cover;
+            background-position: center;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column; 
+        }
+
+        .result-document {
+            margin-bottom: 10px;
+            width: 150vh;
+            padding: 20px;
+            background-color: rgba(255, 255, 255, 0.4); /* Transparent white background */
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Box shadow for depth */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+    </style>
+</head>
+<body>
+    <h1 style="max-width: 100%; font-family: 'Dancing Script' , cursive; font-size: 7vh; margin-top: 0px; margin-bottom: 50px;">Your query results</h1>
+    <div class="results-container">
+
+        <div class="result-document">
+            <label>Doc Title</label>
+        </div>
+        <!-- <div class="result-document">
+            <label>test</label>
+        </div>
+        <div class="result-document"> 
+            <label>test</label>
+        </div>
+        <div class="result-document"> 
+            <label>test</label>
+        </div>
+        <div class="result-document"> 
+            <label>test</label>
+        </div> -->
+
+
+        <!-- {% if results %}
+            {% for result in results %}
+                <div class="result-document">
+                    <h3>{{ result.title }}</h3>
+                    <p>{{ result.description }}</p>
+                </div>
+            {% endfor %}
+        {% else %}
+            <p>No results found for "{{ query }}"</p>
+        {% endif %} -->
+    </div>
+</body>
+</html>
