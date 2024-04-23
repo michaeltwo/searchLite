@@ -60,6 +60,7 @@
     <h1 style="max-width: 100%; font-family: 'Dancing Script' , cursive; font-size: 10vh; margin-top: -60px; margin-bottom: 10px;">Search for it!</h1>
     <div class="search-container">
         <form method="post" action="{% url 'search' %}">
+            {% csrf_token %}
             <input type="text" class="search-input" name="search_input" placeholder="Enter your search query...">
             <button class="search-button" type="submit">Search</button>
         </form>

@@ -9,10 +9,14 @@ from PIL import Image
 from docx import Document
 from PyPDF2 import PdfReader
 from pymongo import MongoClient
+from django.utils import timezone
+from django.http import FileResponse
+from django.shortcuts import get_object_or_404
 import pytesseract
 import filetype
 import hashlib
 import shutil
+import fitz
 import csv
 import os
 import re
@@ -104,9 +108,61 @@ def search(request):
     if request.method == 'POST':
         search_query = request.POST.get('search_input', '') 
         cleaned_and_stemmed_query = clean_and_stem(search_query)
-        return render(request, 'result.html')
+        
+        # Find documents matching the exact sequence of query terms
+        result = {}
+        if len(cleaned_and_stemmed_query) == 1:
+            single_term = cleaned_and_stemmed_query[0]
+            term_postings = postings_collection.find_one({"term": single_term})["positions"]
+            result = {doc_id: {single_term: positions} for doc_id, positions in term_postings.items()}
+        else:
+            first_term = cleaned_and_stemmed_query[0]
+            if first_term in postings_collection.distinct("term"):
+                first_term_postings = postings_collection.find_one({"term": first_term})["positions"]
+                for doc_id, positions in first_term_postings.items():
+                    final_positions = {term: [] for term in cleaned_and_stemmed_query}
+                    # Iterate through the positions of the first term
+                    for pos in positions:
+                        term_pos = {first_term: pos}
+                        match = True
+                        # Check if all other terms occur in sequence after the first term
+                        for i, term in enumerate(cleaned_and_stemmed_query[1:], start=1):
+                            term_postings = postings_collection.find_one({"term": term})["positions"]
+                            if doc_id not in term_postings or pos + i not in term_postings[doc_id]:
+                                match = False
+                                break
+                            term_pos[term] = pos + i
+                        if match:
+                            # Add the positions to the final result for each term
+                            for term, term_position in term_pos.items():
+                                final_positions[term].append(term_position)
+                    # If all terms are present in sequence, add the document to the result
+                    if all(len(final_positions[term]) > 0 for term in cleaned_and_stemmed_query):
+                        result[doc_id] = final_positions
+        
+        # Retrieve the matching documents from your CorpusFile model
+        matching_documents = CorpusFile.objects.filter(id__in=result.keys())
+
+                # Calculate file sizes in KB and MB, and format the upload date
+        for document in matching_documents:
+            file_size_bytes = os.path.getsize(os.path.join(settings.BASE_DIR, 'corpus', document.stored_file_name))
+            document.file_size_kb = round(file_size_bytes / 1024, 2)
+            document.file_size_mb = round(file_size_bytes / (1024 * 1024), 2)
+            document.uploaded_date = timezone.localtime(document.uploaded_at).strftime('%Y-%m-%d %H:%M:%S')
+
+
+        return render(request, 'results.html', {'matching_documents': matching_documents, 'search_query': search_query})
     return render(request, 'search.html')
 
+
+
+def results(request):
+    pass
+
+def load_document_image(request, document_id):
+    document = get_object_or_404(Document, pk=document_id)
+    response = FileResponse(document.image, content_type='image/jpeg')  # Assuming image is stored as a FileField
+    return response
 
 def generate_file_hash(file):
     try:
@@ -158,11 +214,15 @@ def update_postings(doc_id, cleaned_text):
 
 def extract_text_from_pdf(file_path):
     text = ''
-    with open(file_path, 'rb') as file:
-        pdf = PdfReader(file)
-        for page in pdf.pages:
-            text += page.extract_text()
+    try:
+        with fitz.open(file_path) as pdf_file:
+            for page_num in range(pdf_file.page_count):
+                page = pdf_file[page_num]
+                text += page.get_text()
+    except Exception as e:
+        print(f"Error extracting text from PDF: {e}")
     return text
+
 def extract_text_from_docx(file_path):
     document = Document(file_path)
     return '\n'.join([paragraph.text for paragraph in document.paragraphs])

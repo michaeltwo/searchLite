@@ -5,13 +5,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Search Engine</title>
+    <title>Search Results</title>
     <style>
+        /* Your existing CSS styles here */
         body {
             font-family: Arial, sans-serif;
             margin: 0;
             padding: 0;
-            background-image: url("{% static 'slidedown.jpg' %}");
+            background-image: url("{% static 'down.jpg' %}");
             background-size: cover;
             background-position: center;
             height: 100vh;
@@ -20,10 +21,8 @@
             align-items: center;
             flex-direction: column; 
         }
-
-        .result-document {
-            margin-bottom: 10px;
-            width: 150vh;
+        .search-container {
+            width: 50%;
             padding: 20px;
             background-color: rgba(255, 255, 255, 0.4); /* Transparent white background */
             border-radius: 10px;
@@ -32,39 +31,179 @@
             justify-content: center;
             align-items: center;
         }
+
+        .search-input {
+            flex: 1; 
+            padding: 10px;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px 0 0 5px;
+            outline: none;
+        }
+
+        .search-button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #333;
+            color: #fff;
+            border: none;
+            border-radius: 0 5px 5px 0;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .search-button:hover {
+            background-color: #555;
+        }
+
+        /* New styles for document cards */
+        .document-card {
+            margin: 10px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #fff;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Additional styles for filter buttons */
+        .filter-buttons {
+            margin-top: 20px;
+        }
+
+        .filter-button {
+            margin-right: 10px;
+            padding: 5px 10px;
+            font-size: 14px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .filter-button:hover {
+            background-color: blue;
+        }
+
+        /* Active filter button style */
+        .filter-button.active {
+            background-color: blue;
+        }
     </style>
 </head>
 <body>
-    <h1 style="max-width: 100%; font-family: 'Dancing Script' , cursive; font-size: 7vh; margin-top: 0px; margin-bottom: 50px;">Your query results</h1>
-    <div class="results-container">
-
-        <div class="result-document">
-            <label>Doc Title</label>
-        </div>
-        <!-- <div class="result-document">
-            <label>test</label>
-        </div>
-        <div class="result-document"> 
-            <label>test</label>
-        </div>
-        <div class="result-document"> 
-            <label>test</label>
-        </div>
-        <div class="result-document"> 
-            <label>test</label>
-        </div> -->
-
-
-        <!-- {% if results %}
-            {% for result in results %}
-                <div class="result-document">
-                    <h3>{{ result.title }}</h3>
-                    <p>{{ result.description }}</p>
-                </div>
-            {% endfor %}
-        {% else %}
-            <p>No results found for "{{ query }}"</p>
-        {% endif %} -->
+    <h1>Search Results</h1>
+    
+    <!-- Search bar -->
+    <div class="search-container">
+        <form method="post" action="{% url 'search' %}">
+            {% csrf_token %}
+            <input type="text" class="search-input" name="search_input" placeholder="Enter your search query..." value="{{ search_query }}">
+            <button class="search-button" type="submit">Search</button>
+        </form>
     </div>
+
+    <!-- Filter buttons -->
+    <div class="filter-buttons">
+        <button id="allFilterButton" class="filter-button active" data-filter="all">All</button>
+        <button id="pdfFilterButton" class="filter-button" data-filter="pdf">PDF</button>
+        <button id="imagesFilterButton" class="filter-button" data-filter="images">Images</button>
+        <button id="docFilterButton" class="filter-button" data-filter="doc">Word Documents</button>
+        <button id="txtFilterButton" class="filter-button" data-filter="txt">Text Documents</button>
+        <button id="sheetFilterButton" class="filter-button" data-filter="sheets">Sheets</button>
+        <button id="htmlFilterButton" class="filter-button" data-filter="html">HTML</button>
+        <button id="urlFilterButton" class="filter-button" data-filter="urls">URLs</button>
+    </div>
+
+    <!-- Results container -->
+    <div class="results-container">
+        {% for document in matching_documents %}
+        <div class="document-card" data-type="{{ document.file_type }}">
+            <h3>{{ document.uploaded_file_name }}</h3>
+            <p>{{ document.file_type }}</p>
+            <p>{{ document.file_size_kb }} KB / {{ document.file_size_mb }} MB</p>
+            <p>Uploaded: {{ document.uploaded_date }}</p>
+            {% if document.file_type|slice:":6" == "image/" %}
+            <button class="show-image-button">Show Image</button>
+            <img class="document-image" src="{% url 'view_document_image' document.id %}" alt="Document Image" style="display: none;">
+            {% endif %}
+            <a href="/view/{{ document.id }}" target="_blank">View Document</a>
+        </div>
+        {% endfor %}
+    </div>
+
+    <script>
+        filter_mime_types = {
+            'all': [],
+            'pdf': ['application/pdf'],
+            'images': ['image/jpeg', 'image/png', 'image/gif', 'image/bmp', 'image/webp'],
+            'doc': ['application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+            'txt': ['text/plain'],
+            'sheets': ['application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'text/csv'],
+            'html': ['text/html'],
+            'urls': ['url']
+        }
+
+        // Filter documents based on button click
+        document.querySelectorAll('.filter-button').forEach(button => {
+            button.addEventListener('click', () => {
+                const filter = button.dataset.filter;
+                const isActive = button.classList.contains('active');
+
+                // Toggle active class for multiple selection
+                button.classList.toggle('active');
+
+                // Get all active filters
+                const activeFilters = Array.from(document.querySelectorAll('.filter-button.active')).map(button => button.dataset.filter);
+
+                // Filter documents based on selected filters
+                document.querySelectorAll('.document-card').forEach(card => {
+                    const fileType = card.getAttribute('data-type');
+                    const shouldShow = activeFilters.includes('all') || activeFilters.some(filter => filter_mime_types[filter].includes(fileType));
+
+                    if (shouldShow) {
+                        card.style.display = 'block';
+                    } else {
+                        card.style.display = 'none';
+                    }
+                });
+            });
+        });
+
+        document.querySelectorAll('.show-image-button').forEach(button => {
+            button.addEventListener('click', () => {
+                const image = button.nextElementSibling;
+                image.style.display = image.style.display === 'none' ? 'block' : 'none';
+            });
+        });
+
+
+        // Count document cards in each category
+        const countDocuments = () => {
+            const total_count = document.querySelectorAll('.document-card').length;
+            const pdf_count = document.querySelectorAll('.document-card[data-type="application/pdf"]').length;
+            const image_count = document.querySelectorAll('.document-card[data-type*="image/"]').length;
+            const doc_count = document.querySelectorAll('.document-card[data-type="application/msword"], .document-card[data-type="application/vnd.openxmlformats-officedocument.wordprocessingml.document"]').length;
+            const txt_count = document.querySelectorAll('.document-card[data-type="text/plain"]').length;
+            const sheets_count = document.querySelectorAll('.document-card[data-type="application/vnd.ms-excel"], .document-card[data-type="text/csv"]').length;
+            const html_count = document.querySelectorAll('.document-card[data-type="text/html"]').length;
+            const urls_count = document.querySelectorAll('.document-card[data-type="url"]').length;
+
+            // Update filter buttons with counts
+            document.getElementById('allFilterButton').textContent += ' (' + total_count + ')';
+            document.getElementById('pdfFilterButton').textContent += ' (' + pdf_count + ')';
+            document.getElementById('imagesFilterButton').textContent += ' (' + image_count + ')';
+            document.getElementById('docFilterButton').textContent += ' (' + doc_count + ')';
+            document.getElementById('txtFilterButton').textContent += ' (' + txt_count + ')';
+            document.getElementById('sheetFilterButton').textContent += ' (' + sheets_count + ')';
+            document.getElementById('htmlFilterButton').textContent += ' (' + html_count + ')';
+            document.getElementById('urlFilterButton').textContent += ' (' + urls_count + ')';
+            
+        };
+
+        // Call countDocuments function on page load
+        window.addEventListener('load', countDocuments);
+
+    </script>
 </body>
 </html>
