@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Document Viewer</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.min.js"></script>
+</head>
+<body>
+    <h1>PDF Document Viewer</h1>
+    <div id="viewer"></div>
+    <script>
+        // Load the PDF document using PDF.js
+        const pdfPath = "{% url 'view_pdf_document' docId %}?query={{ query }}"; // Use Django template tag to generate the URL
+        const loadingTask = pdfjsLib.getDocument(pdfPath);
+
+        loadingTask.promise.then(function(pdf) {
+            // Fetch the first page
+            pdf.getPage(1).then(function(page) {
+                const scale = 1.5;
+                const viewport = page.getViewport({ scale });
+
+                // Prepare canvas using PDF.js
+                const canvas = document.createElement('canvas');
+                const context = canvas.getContext('2d');
+                canvas.height = viewport.height;
+                canvas.width = viewport.width;
+
+                // Render PDF page into canvas context
+                const renderContext = {
+                    canvasContext: context,
+                    viewport: viewport
+                };
+                page.render(renderContext).promise.then(function() {
+                    document.getElementById('viewer').appendChild(canvas);
+                });
+            });
+        });
+    </script>
+</body>
+</html>

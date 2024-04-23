@@ -12,6 +12,8 @@ from pymongo import MongoClient
 from django.utils import timezone
 from django.http import FileResponse
 from django.shortcuts import get_object_or_404
+from .utils import highlight_query_in_document
+import mimetypes
 import pytesseract
 import filetype
 import hashlib
@@ -163,6 +165,43 @@ def load_document_image(request, document_id):
     document = get_object_or_404(Document, pk=document_id)
     response = FileResponse(document.image, content_type='image/jpeg')  # Assuming image is stored as a FileField
     return response
+
+def view_document(request, doc_id):
+    document = CorpusFile.objects.get(id=doc_id)
+    query = request.GET.get('query', '')
+
+    file_path = os.path.join(settings.BASE_DIR, 'corpus', document.stored_file_name)
+    file_name, file_extension = os.path.splitext(document.stored_file_name)
+    
+    if file_extension == '.pdf':
+        # Render PDF document using PDF.js or any other PDF viewer
+        return render(request, 'pdf_viewer.html', {'docId': doc_id,'query': query})
+    elif file_extension == '.docx':
+        # Convert Word document to PDF and render using PDF.js or other viewer
+        pdf_path = os.path.join(settings.BASE_DIR, 'corpus', f'{file_name}.pdf')
+        doc = Document(file_path)
+        doc.save(pdf_path)
+        return render(request, 'pdf_viewer.html', {'file_path': pdf_path, 'query': query})
+    elif file_extension in ['.jpg', '.jpeg', '.png', '.gif']:
+        # Render image directly
+        return render(request, 'image_viewer.html', {'file_path': file_path, 'query': query})
+    elif file_extension == '.html':
+        # Render HTML document in an iframe
+        return render(request, 'html_viewer.html', {'file_path': file_path, 'query': query})
+    else:
+        pass
+        
+
+def view_pdf_document(request, doc_id):
+    document = get_object_or_404(CorpusFile, id=doc_id)
+    file_path = os.path.join(settings.BASE_DIR, 'corpus', document.stored_file_name)
+
+    # Send PDF file as response
+    with open(file_path, 'rb') as f:
+        f.seek(0)
+        response = FileResponse(f, content_type='application/pdf')
+        response['Content-Disposition'] = f'inline; filename="{document.stored_file_name}"'
+        return response
 
 def generate_file_hash(file):
     try:

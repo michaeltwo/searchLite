@@ -127,7 +127,7 @@
             <button class="show-image-button">Show Image</button>
             <img class="document-image" src="{% url 'view_document_image' document.id %}" alt="Document Image" style="display: none;">
             {% endif %}
-            <a href="/view/{{ document.id }}" target="_blank">View Document</a>
+            <a href="/searchLite/view/{{ document.id }}?query={{ search_query }}" target="_blank">View Document</a>
         </div>
         {% endfor %}
     </div>
