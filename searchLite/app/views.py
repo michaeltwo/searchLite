@@ -129,10 +129,10 @@ def search(request):
 def results(request):
     pass
 
-def load_image_document(request, document_id):
-    document = get_object_or_404(Document, pk=document_id)
-    response = FileResponse(document.image, content_type='image/jpeg')  # Assuming image is stored as a FileField
-    return response
+def load_image_document(request, doc_id):
+    document = get_object_or_404(CorpusFile, id=doc_id)
+    image_path = os.path.join(settings.BASE_DIR, 'corpus', document.stored_file_name)
+    return FileResponse(open(image_path, 'rb'), content_type='image/jpeg')
 
 def view_document(request, doc_id):
     query = request.GET.get('query', '')
@@ -152,7 +152,7 @@ def load_document(request, doc_id):
     elif document.stored_file_name.endswith(('.txt', '.text')):
         pass
     elif document.stored_file_name.endswith(('.jpg', '.jpeg', '.png', '.bmp')):
-        pass
+        return view_image_document(document, query)
     elif document.stored_file_name.endswith(('.html', '.htm')):
         pass
     elif document.stored_file_name.endswith(('.gif')):
@@ -171,6 +171,10 @@ def view_pdf_document(document, query):
         pdf_path = highlight_text_in_pdf(pdf_path, document.stored_file_name, query)
 
     return FileResponse(open(pdf_path, 'rb'))
+
+def view_image_document(document, query):
+    image_path = os.path.join(settings.BASE_DIR, 'corpus', document.stored_file_name)
+    return FileResponse(open(image_path, 'rb'))
 
 def process_documents(file_hashes):
     print("Running Background tasks")
