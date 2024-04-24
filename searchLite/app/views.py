@@ -12,7 +12,13 @@ from pymongo import MongoClient
 from django.utils import timezone
 from django.http import FileResponse
 from django.shortcuts import get_object_or_404
+from django.http import HttpResponse
+from .constants import ALLOWED_FILE_TYPES
 from .utils import highlight_query_in_document
+from django.shortcuts import get_object_or_404
+from django.http import HttpResponse
+
+from .models import CorpusFile
 import mimetypes
 import pytesseract
 import filetype
@@ -98,7 +104,6 @@ def upload(request):
             message += f"Invalid files: {', '.join(invalid_files)}"
 
         if file_hashes:
-            #Task.objects.create(task_name='process_documents', task_params={'file_hashes': file_hashes}, run_at=datetime.now() + timedelta(seconds=1))
             process_documents(file_hashes)
 
         return render(request, 'upload.html', {'message': message})
@@ -196,6 +201,24 @@ def view_pdf_document(request, doc_id):
     document = get_object_or_404(CorpusFile, id=doc_id)
     file_path = os.path.join(settings.BASE_DIR, 'corpus', document.stored_file_name)
 
+def view_document_image(request, doc_id):
+    # Retrieve the CorpusFile object by its ID
+    document = get_object_or_404(CorpusFile, id=doc_id)
+    
+    # Assuming the image is stored as a FileField in your CorpusFile model
+    # Replace 'image' with the actual name of the FileField in your model
+    image = document.image  # Replace 'image' with the actual name of the FileField
+    
+    # Read the image data
+    with image.open() as f:
+        image_data = f.read()
+    
+    # Set the content type of the response
+    content_type = 'image/jpeg'  # Adjust the content type based on your image format
+    
+    # Return the image data as an HTTP response
+    return HttpResponse(image_data, content_type=content_type)
+
     # Send PDF file as response
     with open(file_path, 'rb') as f:
         f.seek(0)
@@ -279,4 +302,9 @@ def extract_text_from_text(file_path):
         return file.read()
 
 def extract_text_from_image(file_path):
-    return pytesseract.image_to_string(Image.open(file_path), lang='eng')
+    text = ''
+    try:
+        text = pytesseract.image_to_string(Image.open(file_path), lang='eng')
+    except Exception as e:
+        print(f"Error extracting text from image: {e}")
+    return text
