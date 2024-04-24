@@ -11,7 +11,7 @@
             font-family: Arial, sans-serif;
             margin: 0;
             padding: 0;
-            background-image: url("{% static 'down.jpg' %}");
+            background-image: url("{% static 'a.jpg' %}");
             background-size: cover;
             background-position: center;
             height: 100vh;
@@ -21,14 +21,15 @@
             flex-direction: column; 
         }
         .search-container {
-            width: 50%;
+            width: 40%;
             padding: 20px;
-            background-color: rgba(255, 255, 255, 0.4); /* Transparent white background */
+            background-color: rgba(255, 255, 255, 0.4); 
             border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Box shadow for depth */
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); 
             display: flex;
             justify-content: center;
             align-items: center;
+            margin-left: 4%;
         }
 
         .search-input {
@@ -57,11 +58,11 @@
     </style>
 </head>
 <body>
-    <h1 style="max-width: 100%; font-family: 'Dancing Script' , cursive; font-size: 10vh; margin-top: -60px; margin-bottom: 10px;">Search for it!</h1>
+    <h1 style="max-width: 100%; font-family: 'Dancing Script' , cursive; font-size: 7vh; margin-top: -120px; margin-bottom: 10px;">Search for it!</h1>
     <div class="search-container">
-        <form method="post" action="{% url 'search' %}">
+        <form method="post" action="{% url 'search' %}" style="width: 120%;">
             {% csrf_token %}
-            <input type="text" class="search-input" name="search_input" placeholder="Enter your search query...">
+            <input type="text" class="search-input" name="search_input" placeholder="Enter your search query..." style="width: 80%;">
             <button class="search-button" type="submit">Search</button>
         </form>
     </div>

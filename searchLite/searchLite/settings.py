@@ -81,8 +81,8 @@ DATABASES = {
         "ENGINE": "django.db.backends.postgresql",
         "NAME": "SearchLite",
         "USER": "postgres",
-        "PASSWORD":"PostgreSQLService@24/7",
-        #"PASSWORD":"1996",
+        #"PASSWORD":"PostgreSQLService@24/7",
+        "PASSWORD":"1996",
         "HOST":"localhost",
         "PORT":"5432",
     }
