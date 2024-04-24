@@ -131,8 +131,8 @@ def results(request):
 
 def load_image_document(request, document_id):
     document = get_object_or_404(Document, pk=document_id)
-    response = FileResponse(document.image, content_type='image/jpeg')  # Assuming image is stored as a FileField
-    return response
+    image_path = os.path.join(settings.BASE_DIR, 'corpus', document.stored_file_name)
+    return FileResponse(open(image_path, 'rb'), content_type='image/jpeg')
 
 def view_document(request, doc_id):
     query = request.GET.get('query', '')
