@@ -6,5 +6,6 @@ ALLOWED_FILE_TYPES = [
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     'text/csv',
     'application/pdf',
-    'text/plain',  # For .txt files
+    'text/plain', 
+    'text/html', 
 ]

@@ -17,6 +17,7 @@ from .constants import ALLOWED_FILE_TYPES
 from .utils import highlight_query_in_document
 from django.shortcuts import get_object_or_404
 from django.http import HttpResponse
+from bs4 import BeautifulSoup
 from .models import CorpusFile
 from django.http import StreamingHttpResponse
 import subprocess
@@ -115,6 +116,7 @@ def upload(request):
         return render(request, 'upload.html', {'message': message})
 
     return render(request, 'upload.html')
+
 
 
 def search(request):
@@ -275,6 +277,10 @@ def extract_text(file_path):
         return extract_text_from_text(file_path)
     elif file_path.endswith(('.jpg', '.jpeg', '.png', '.bmp')):
         return extract_text_from_image(file_path)
+    elif file_path.endswith(('.html', '.htm')):
+        return extract_text_from_html(file_path)
+    elif file_path.endswith(('.gif')):
+        return extract_text_from_gif(file_path)
     else:
         return ''
 
@@ -334,6 +340,30 @@ def extract_text_from_image(file_path):
         text = pytesseract.image_to_string(Image.open(file_path), lang='eng')
     except Exception as e:
         print(f"Error extracting text from image: {e}")
+    return text
+
+def extract_text_from_html(file_path):
+    text = ''
+    try:
+        with open(file_path, 'r') as file:
+            html_content = file.read()
+            soup = BeautifulSoup(html_content, 'html.parser')
+            # Extract text from all text-containing elements
+            text = ''.join(soup.find_all(text=True, recursive=True))
+    except Exception as e:
+        print(f"Error extracting text from HTML: {e}")
+    return text
+
+def extract_text_from_gif(file_path):
+    text = ''
+    try:
+        with Image.open(file_path) as img:
+            frames = img.n_frames if hasattr(img, 'n_frames') else 1
+            for frame in range(frames):
+                img.seek(frame)
+                text += pytesseract.image_to_string(img, lang='eng')
+    except Exception as e:
+        print(f"Error extracting text from GIF: {e}")
     return text
 
 class CustomFileType:
