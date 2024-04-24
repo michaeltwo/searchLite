@@ -124,35 +124,37 @@ def search(request):
         
         # Find documents matching the exact sequence of query terms
         result = {}
-        if len(cleaned_and_stemmed_query) == 1:
-            single_term = cleaned_and_stemmed_query[0]
-            term_postings = postings_collection.find_one({"term": single_term})["positions"]
-            result = {doc_id: {single_term: positions} for doc_id, positions in term_postings.items()}
-        else:
-            first_term = cleaned_and_stemmed_query[0]
-            if first_term in postings_collection.distinct("term"):
-                first_term_postings = postings_collection.find_one({"term": first_term})["positions"]
-                for doc_id, positions in first_term_postings.items():
-                    final_positions = {term: [] for term in cleaned_and_stemmed_query}
-                    # Iterate through the positions of the first term
-                    for pos in positions:
-                        term_pos = {first_term: pos}
-                        match = True
-                        # Check if all other terms occur in sequence after the first term
-                        for i, term in enumerate(cleaned_and_stemmed_query[1:], start=1):
-                            term_postings = postings_collection.find_one({"term": term})["positions"]
-                            if doc_id not in term_postings or pos + i not in term_postings[doc_id]:
-                                match = False
-                                break
-                            term_pos[term] = pos + i
-                        if match:
-                            # Add the positions to the final result for each term
-                            for term, term_position in term_pos.items():
-                                final_positions[term].append(term_position)
-                    # If all terms are present in sequence, add the document to the result
-                    if all(len(final_positions[term]) > 0 for term in cleaned_and_stemmed_query):
-                        result[doc_id] = final_positions
-        
+        try:
+            if len(cleaned_and_stemmed_query) == 1:
+                single_term = cleaned_and_stemmed_query[0]
+                term_postings = postings_collection.find_one({"term": single_term})["positions"]
+                result = {doc_id: {single_term: positions} for doc_id, positions in term_postings.items()}
+            else:
+                first_term = cleaned_and_stemmed_query[0]
+                if first_term in postings_collection.distinct("term"):
+                    first_term_postings = postings_collection.find_one({"term": first_term})["positions"]
+                    for doc_id, positions in first_term_postings.items():
+                        final_positions = {term: [] for term in cleaned_and_stemmed_query}
+                        # Iterate through the positions of the first term
+                        for pos in positions:
+                            term_pos = {first_term: pos}
+                            match = True
+                            # Check if all other terms occur in sequence after the first term
+                            for i, term in enumerate(cleaned_and_stemmed_query[1:], start=1):
+                                term_postings = postings_collection.find_one({"term": term})["positions"]
+                                if doc_id not in term_postings or pos + i not in term_postings[doc_id]:
+                                    match = False
+                                    break
+                                term_pos[term] = pos + i
+                            if match:
+                                # Add the positions to the final result for each term
+                                for term, term_position in term_pos.items():
+                                    final_positions[term].append(term_position)
+                        # If all terms are present in sequence, add the document to the result
+                        if all(len(final_positions[term]) > 0 for term in cleaned_and_stemmed_query):
+                            result[doc_id] = final_positions
+        except:
+            return render(request, 'results.html', {'search_query': search_query})
         # Retrieve the matching documents from your CorpusFile model
         matching_documents = CorpusFile.objects.filter(id__in=result.keys())
 
