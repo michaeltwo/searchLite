@@ -7,9 +7,7 @@ urlpatterns = [
     path('upload/', views.upload, name='upload'),
     path('search/', views.search, name='search'),
     path('results/', views.results, name='results'),
-    path('load/<int:document_id>/', views.load_document_image, name='load_document_image'),
     path('view/<int:doc_id>', views.view_document, name='view_document'),
-    path('view_pdf_document/<int:doc_id>/', views.view_pdf_document, name='view_pdf_document'),
-    path('view_document_image/<int:doc_id>/', views.view_document_image, name='view_document_image'),
+    path('load_image_document/<int:doc_id>/', views.load_image_document, name='load_image_document'),
     path('load_document/<int:doc_id>/', views.view_pdf_document, name='load_document'),
 ]
