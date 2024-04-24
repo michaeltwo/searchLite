@@ -1,67 +1,22 @@
+from django.http import FileResponse, HttpResponseBadRequest
+from django.shortcuts import get_object_or_404
+from .constants import ALLOWED_FILE_TYPES
 from django.shortcuts import render
-from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseNotFound
-from django.conf import settings
-from .constants import ALLOWED_FILE_TYPES
-from .models import CorpusFile
-from datetime import datetime, timedelta
-from nltk.stem import PorterStemmer
-from PIL import Image
-from docx import Document
-from PyPDF2 import PdfReader
-from pymongo import MongoClient
 from django.utils import timezone
-from django.http import FileResponse
-from django.shortcuts import get_object_or_404
-from django.http import HttpResponse
-from .constants import ALLOWED_FILE_TYPES
-from .utils import highlight_query_in_document
-from django.shortcuts import get_object_or_404
-from django.http import HttpResponse
-from bs4 import BeautifulSoup
+from django.conf import settings
 from .models import CorpusFile
-from django.http import StreamingHttpResponse
-import subprocess
-import mimetypes
-import pytesseract
+from datetime import datetime
+from .text_extractor import *
+from .mongo_services import *
+from docx import Document
+from .utils import *
 import filetype
-import hashlib
 import shutil
-import fitz
-import csv
 import os
-import re
-
-import nltk
-nltk.download('punkt')
-nltk.download('averaged_perceptron_tagger')
-nltk.download('wordnet')
-nltk.download('stopwords')
-
-stemmer = PorterStemmer()
-
-client = MongoClient('localhost', 27017)
-db = client['SearchLite']  # Replace 'your_database_name' with your actual database name
-postings_collection = db['Postings']  # Collection to store postings
-
 
 def homepage(request):
     return render(request, 'index.html')
 
-def process_documents(file_hashes):
-    print("Running Background tasks")
-    for file_hash in file_hashes:
-        # Retrieve the file path from the database using file_hash
-        corpus_file = CorpusFile.objects.get(file_hash=file_hash)
-        file_path = os.path.join(settings.BASE_DIR, 'corpus', corpus_file.stored_file_name)
-        # Extract text from the file
-        text = extract_text(file_path)
-        # Preprocess the text
-        cleaned_text = clean_and_stem(text)
-        # Update the postings
-        update_postings(str(corpus_file.id), cleaned_text)
-        # Update the CorpusFile object to mark processing as completed
-        #corpus_file.processed = True
-        #corpus_file.save()
 
 def upload(request):
     valid_files = []
@@ -167,224 +122,84 @@ def search(request):
             document.file_size_mb = round(file_size_bytes / (1024 * 1024), 2)
             document.uploaded_date = timezone.localtime(document.uploaded_at).strftime('%Y-%m-%d %H:%M:%S')
 
-
         return render(request, 'results.html', {'matching_documents': matching_documents, 'search_query': search_query})
     return render(request, 'search.html')
-
 
 
 def results(request):
     pass
 
-def load_document_image(request, document_id):
+def load_image_document(request, document_id):
     document = get_object_or_404(Document, pk=document_id)
     response = FileResponse(document.image, content_type='image/jpeg')  # Assuming image is stored as a FileField
     return response
 
 def view_document(request, doc_id):
-    document = CorpusFile.objects.get(id=doc_id)
     query = request.GET.get('query', '')
-
-    file_path = os.path.join(settings.BASE_DIR, 'corpus', document.stored_file_name)
-    file_name, file_extension = os.path.splitext(document.stored_file_name)
-    
-    if file_extension == '.pdf':
-        # Render PDF document using PDF.js or any other PDF viewer
-        return render(request, 'doc_viewer.html', {'doc_id': doc_id,'query': query})
-    elif file_extension == '.docx':
-        # Convert Word document to PDF and render using PDF.js or other viewer
-        pdf_path = os.path.join(settings.BASE_DIR, 'corpus', f'{file_name}.pdf')
-        doc = Document(file_path)
-        doc.save(pdf_path)
-        return render(request, 'pdf_viewer.html', {'file_path': pdf_path, 'query': query})
-    elif file_extension in ['.jpg', '.jpeg', '.png', '.gif']:
-        # Render image directly
-        return render(request, 'image_viewer.html', {'file_path': file_path, 'query': query})
-    elif file_extension == '.html':
-        # Render HTML document in an iframe
-        return render(request, 'html_viewer.html', {'file_path': file_path, 'query': query})
-    else:
-        pass
+    return render(request, 'doc_viewer.html', {'doc_id': doc_id,'query': query})
 
 def load_document(request, doc_id):
     # Get the document object based on the doc_id
     document = get_object_or_404(CorpusFile, id=doc_id)
-    file_path = os.path.join(settings.BASE_DIR, 'corpus', document.stored_file_name)
+    query = request.GET.get('query', '')
 
-    return FileResponse(open(file_path, 'rb'))
+    if document.stored_file_name.endswith('.pdf'):
+        return view_pdf_document(document, query)
+    elif document.stored_file_name.endswith(('.doc', '.docx')):
+        pass
+    elif document.stored_file_name.endswith('.csv'):
+        pass
+    elif document.stored_file_name.endswith(('.txt', '.text')):
+        pass
+    elif document.stored_file_name.endswith(('.jpg', '.jpeg', '.png', '.bmp')):
+        pass
+    elif document.stored_file_name.endswith(('.html', '.htm')):
+        pass
+    elif document.stored_file_name.endswith(('.gif')):
+        pass
+    else:
+        return ''
 
-def file_iterator(file_path, chunk_size=8192):
-    with open(file_path, 'rb') as f:
-        while True:
-            chunk = f.read(chunk_size)
-            if not chunk:
-                break
-            yield chunk
-
-def view_pdf_document(request, doc_id):
-    document = get_object_or_404(CorpusFile, id=doc_id)
+def view_pdf_document(document, query):
     pdf_path = os.path.join(settings.BASE_DIR, 'corpus', document.stored_file_name)
     
     # Check if the file exists and is a PDF
     if not os.path.exists(pdf_path) or not pdf_path.endswith('.pdf'):
         return HttpResponseBadRequest("Invalid PDF file.")
 
-    # Highlight text in the PDF based on the query
-    query = request.GET.get('query', '')
     if query:
         pdf_path = highlight_text_in_pdf(pdf_path, document.stored_file_name, query)
 
     return FileResponse(open(pdf_path, 'rb'))
 
-def view_document_image(request, doc_id):
-    # Retrieve the CorpusFile object by its ID
-    document = get_object_or_404(CorpusFile, id=doc_id)
+def process_documents(file_hashes):
+    print("Running Background tasks")
+    for file_hash in file_hashes:
+        # Retrieve the file path from the database using file_hash
+        corpus_file = CorpusFile.objects.get(file_hash=file_hash)
+        file_path = os.path.join(settings.BASE_DIR, 'corpus', corpus_file.stored_file_name)
+        # Extract text from the file
+        text = extract_text(file_path)
+        # Preprocess the text
+        cleaned_text = clean_and_stem(text)
+        # Update the postings
+        update_postings(str(corpus_file.id), cleaned_text)
+        # Update the CorpusFile object to mark processing as completed
+        corpus_file.processed = True
+        corpus_file.save()
+
+
+
     
-    # Assuming the image is stored as a FileField in your CorpusFile model
-    # Replace 'image' with the actual name of the FileField in your model
-    image = document.image  # Replace 'image' with the actual name of the FileField
-    
-    # Read the image data
-    with image.open() as f:
-        image_data = f.read()
-    
-    # Set the content type of the response
-    content_type = 'image/jpeg'  # Adjust the content type based on your image format
-    
-    # Return the image data as an HTTP response
-    return HttpResponse(image_data, content_type=content_type)
 
 
-def generate_file_hash(file):
-    try:
-        file.seek(0)  # Move the file pointer to the beginning
-        file_content = file.read()
-        file_hash = hashlib.sha256(file_content).hexdigest()
-        file.seek(0)
-        return file_hash
-    except Exception as e:
-        print(f"Error generating file hash: {e}")
-        return None
-    
-def extract_text(file_path):
-    if file_path.endswith('.pdf'):
-        return extract_text_from_pdf(file_path)
-    elif file_path.endswith(('.doc', '.docx')):
-        return extract_text_from_docx(file_path)
-    elif file_path.endswith('.csv'):
-        return extract_text_from_csv(file_path)
-    elif file_path.endswith(('.txt', '.text')):
-        return extract_text_from_text(file_path)
-    elif file_path.endswith(('.jpg', '.jpeg', '.png', '.bmp')):
-        return extract_text_from_image(file_path)
-    elif file_path.endswith(('.html', '.htm')):
-        return extract_text_from_html(file_path)
-    elif file_path.endswith(('.gif')):
-        return extract_text_from_gif(file_path)
-    else:
-        return ''
-
-def clean_and_stem(document):
-    # Remove special characters and punctuation
-    cleaned_doc = re.sub(r'[^a-zA-Z\s]', '', document)
-    # Convert to lowercase
-    cleaned_doc = cleaned_doc.lower()
-    # Tokenize by splitting
-    tokens = cleaned_doc.split()
-    # Stemming
-    stemmed_tokens = [stemmer.stem(token) for token in tokens]
-    return stemmed_tokens
-
-def update_postings(doc_id, cleaned_text):
-    for position, term in enumerate(cleaned_text):
-        postings = postings_collection.find_one({"term": term})
-        if postings is None:
-            postings = {"term": term, "positions": {doc_id: [position]}}
-        else:
-            positions = postings.get("positions", {})
-            positions[doc_id] = positions.get(doc_id, []) + [position]
-            postings["positions"] = positions
-        postings_collection.replace_one({"term": term}, postings, upsert=True)
 
 
-def extract_text_from_pdf(file_path):
-    text = ''
-    try:
-        with fitz.open(file_path) as pdf_file:
-            for page_num in range(pdf_file.page_count):
-                page = pdf_file[page_num]
-                text += page.get_text()
-    except Exception as e:
-        print(f"Error extracting text from PDF: {e}")
-    return text
 
-def extract_text_from_docx(file_path):
-    document = Document(file_path)
-    return '\n'.join([paragraph.text for paragraph in document.paragraphs])
 
-def extract_text_from_csv(file_path):
-    text = ''
-    with open(file_path, 'r') as file:
-        reader = csv.reader(file)
-        for row in reader:
-            text += ', '.join(row) + '\n'
-    return text
 
-def extract_text_from_text(file_path):
-    with open(file_path, 'r') as file:
-        return file.read()
 
-def extract_text_from_image(file_path):
-    text = ''
-    try:
-        text = pytesseract.image_to_string(Image.open(file_path), lang='eng')
-    except Exception as e:
-        print(f"Error extracting text from image: {e}")
-    return text
 
-def extract_text_from_html(file_path):
-    text = ''
-    try:
-        with open(file_path, 'r') as file:
-            html_content = file.read()
-            soup = BeautifulSoup(html_content, 'html.parser')
-            # Extract text from all text-containing elements
-            text = ''.join(soup.find_all(text=True, recursive=True))
-    except Exception as e:
-        print(f"Error extracting text from HTML: {e}")
-    return text
 
-def extract_text_from_gif(file_path):
-    text = ''
-    try:
-        with Image.open(file_path) as img:
-            frames = img.n_frames if hasattr(img, 'n_frames') else 1
-            for frame in range(frames):
-                img.seek(frame)
-                text += pytesseract.image_to_string(img, lang='eng')
-    except Exception as e:
-        print(f"Error extracting text from GIF: {e}")
-    return text
 
-class CustomFileType:
-    def __init__(self, mime=None):
-        self.mime = mime
 
-def highlight_text_in_pdf(pdf_path, file_name, query):
-    pdf_document = fitz.open(pdf_path)
-    output_pdf = fitz.open()
-
-    for page_number in range(len(pdf_document)):
-        page = pdf_document[page_number]
-        text = page.get_text()
-        if query.lower() in text.lower():
-            for instance in page.search_for(query):
-                page.add_highlight_annot(instance)
-        output_pdf.insert_pdf(pdf_document, from_page=page_number, to_page=page_number)
-
-    highlighted_pdf_path = os.path.join(settings.BASE_DIR, 'highlighted_pdfs', f'{file_name}_highlighted.pdf')
-    output_pdf.save(highlighted_pdf_path)
-    output_pdf.close()
-    pdf_document.close()
-
-    return highlighted_pdf_path

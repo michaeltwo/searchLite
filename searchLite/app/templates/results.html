@@ -126,7 +126,7 @@
             <p>Uploaded: {{ document.uploaded_date }}</p>
             {% if document.file_type|slice:":6" == "image/" %}
             <button class="show-image-button">Show Image</button>
-            <img class="document-image" src="{% url 'view_document_image' document.id %}" alt="Document Image" style="display: none;">
+            <img class="document-image" src="{% url 'load_image_document' document.id %}" alt="Document Image" style="display: none;">
             {% endif %}
             <a href="/searchLite/view/{{ document.id }}?query={{ search_query }}" target="_blank">View Document</a>
         </div>
