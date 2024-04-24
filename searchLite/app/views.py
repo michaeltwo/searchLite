@@ -17,9 +17,9 @@ from .constants import ALLOWED_FILE_TYPES
 from .utils import highlight_query_in_document
 from django.shortcuts import get_object_or_404
 from django.http import HttpResponse
-
 from .models import CorpusFile
 from django.http import StreamingHttpResponse
+import subprocess
 import mimetypes
 import pytesseract
 import filetype
@@ -221,19 +221,18 @@ def file_iterator(file_path, chunk_size=8192):
 
 def view_pdf_document(request, doc_id):
     document = get_object_or_404(CorpusFile, id=doc_id)
-    file_path = os.path.join(settings.BASE_DIR, 'corpus', document.stored_file_name)
-        # Check if the file exists
-    if not os.path.exists(file_path):
-        return HttpResponseNotFound("The requested file was not found.")
-
-    # Check if the file is a PDF (optional, but recommended)
-    if not file_path.endswith('.pdf'):
-        return HttpResponseBadRequest("The requested file is not a PDF.")
+    pdf_path = os.path.join(settings.BASE_DIR, 'corpus', document.stored_file_name)
     
-    # Send PDF file as response
-    response = StreamingHttpResponse(file_iterator(file_path), content_type='application/pdf')
-    response['Content-Disposition'] = f'inline; filename="{document.stored_file_name}"'
-    return response
+    # Check if the file exists and is a PDF
+    if not os.path.exists(pdf_path) or not pdf_path.endswith('.pdf'):
+        return HttpResponseBadRequest("Invalid PDF file.")
+
+    # Highlight text in the PDF based on the query
+    query = request.GET.get('query', '')
+    if query:
+        pdf_path = highlight_text_in_pdf(pdf_path, document.stored_file_name, query)
+
+    return FileResponse(open(pdf_path, 'rb'))
 
 def view_document_image(request, doc_id):
     # Retrieve the CorpusFile object by its ID
@@ -340,3 +339,22 @@ def extract_text_from_image(file_path):
 class CustomFileType:
     def __init__(self, mime=None):
         self.mime = mime
+
+def highlight_text_in_pdf(pdf_path, file_name, query):
+    pdf_document = fitz.open(pdf_path)
+    output_pdf = fitz.open()
+
+    for page_number in range(len(pdf_document)):
+        page = pdf_document[page_number]
+        text = page.get_text()
+        if query.lower() in text.lower():
+            for instance in page.search_for(query):
+                page.add_highlight_annot(instance)
+        output_pdf.insert_pdf(pdf_document, from_page=page_number, to_page=page_number)
+
+    highlighted_pdf_path = os.path.join(settings.BASE_DIR, 'highlighted_pdfs', f'{file_name}_highlighted.pdf')
+    output_pdf.save(highlighted_pdf_path)
+    output_pdf.close()
+    pdf_document.close()
+
+    return highlighted_pdf_path
