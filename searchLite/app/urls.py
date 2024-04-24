@@ -9,5 +9,5 @@ urlpatterns = [
     path('results/', views.results, name='results'),
     path('view/<int:doc_id>', views.view_document, name='view_document'),
     path('load_image_document/<int:doc_id>/', views.load_image_document, name='load_image_document'),
-    path('load_document/<int:doc_id>/', views.view_pdf_document, name='load_document'),
+    path('load_document/<int:doc_id>/', views.load_document, name='load_document'),
 ]
