@@ -65,6 +65,11 @@ def upload(request):
         files = request.FILES.getlist('file')
         for file in files:
             file_info = filetype.guess(file.read())
+            if not file_info:
+                file_info = CustomFileType()
+                if file.content_type:
+                    file_info.mime = file.content_type
+
             if file_info is not None and file_info.mime in ALLOWED_FILE_TYPES:
                 file_hash = generate_file_hash(file)
                 if not CorpusFile.objects.filter(file_hash=file_hash).exists():
@@ -301,3 +306,7 @@ def extract_text_from_text(file_path):
 
 def extract_text_from_image(file_path):
     return pytesseract.image_to_string(Image.open(file_path), lang='eng')
+
+class CustomFileType:
+    def __init__(self, mime=None):
+        self.mime = mime
