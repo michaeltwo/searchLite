@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseNotFound
 from django.conf import settings
 from .constants import ALLOWED_FILE_TYPES
 from .models import CorpusFile
@@ -19,6 +19,7 @@ from django.shortcuts import get_object_or_404
 from django.http import HttpResponse
 
 from .models import CorpusFile
+from django.http import StreamingHttpResponse
 import mimetypes
 import pytesseract
 import filetype
@@ -180,7 +181,7 @@ def view_document(request, doc_id):
     
     if file_extension == '.pdf':
         # Render PDF document using PDF.js or any other PDF viewer
-        return render(request, 'pdf_viewer.html', {'docId': doc_id,'query': query})
+        return render(request, 'doc_viewer.html', {'doc_id': doc_id,'query': query})
     elif file_extension == '.docx':
         # Convert Word document to PDF and render using PDF.js or other viewer
         pdf_path = os.path.join(settings.BASE_DIR, 'corpus', f'{file_name}.pdf')
@@ -195,11 +196,37 @@ def view_document(request, doc_id):
         return render(request, 'html_viewer.html', {'file_path': file_path, 'query': query})
     else:
         pass
-        
+
+def load_document(request, doc_id):
+    # Get the document object based on the doc_id
+    document = get_object_or_404(CorpusFile, id=doc_id)
+    file_path = os.path.join(settings.BASE_DIR, 'corpus', document.stored_file_name)
+
+    return FileResponse(open(file_path, 'rb'))
+
+def file_iterator(file_path, chunk_size=8192):
+    with open(file_path, 'rb') as f:
+        while True:
+            chunk = f.read(chunk_size)
+            if not chunk:
+                break
+            yield chunk
 
 def view_pdf_document(request, doc_id):
     document = get_object_or_404(CorpusFile, id=doc_id)
     file_path = os.path.join(settings.BASE_DIR, 'corpus', document.stored_file_name)
+        # Check if the file exists
+    if not os.path.exists(file_path):
+        return HttpResponseNotFound("The requested file was not found.")
+
+    # Check if the file is a PDF (optional, but recommended)
+    if not file_path.endswith('.pdf'):
+        return HttpResponseBadRequest("The requested file is not a PDF.")
+    
+    # Send PDF file as response
+    response = StreamingHttpResponse(file_iterator(file_path), content_type='application/pdf')
+    response['Content-Disposition'] = f'inline; filename="{document.stored_file_name}"'
+    return response
 
 def view_document_image(request, doc_id):
     # Retrieve the CorpusFile object by its ID
@@ -219,12 +246,6 @@ def view_document_image(request, doc_id):
     # Return the image data as an HTTP response
     return HttpResponse(image_data, content_type=content_type)
 
-    # Send PDF file as response
-    with open(file_path, 'rb') as f:
-        f.seek(0)
-        response = FileResponse(f, content_type='application/pdf')
-        response['Content-Disposition'] = f'inline; filename="{document.stored_file_name}"'
-        return response
 
 def generate_file_hash(file):
     try:

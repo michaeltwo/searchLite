@@ -11,4 +11,5 @@ urlpatterns = [
     path('view/<int:doc_id>', views.view_document, name='view_document'),
     path('view_pdf_document/<int:doc_id>/', views.view_pdf_document, name='view_pdf_document'),
     path('view_document_image/<int:doc_id>/', views.view_document_image, name='view_document_image'),
+    path('load_document/<int:doc_id>/', views.load_document, name='load_document'),
 ]
