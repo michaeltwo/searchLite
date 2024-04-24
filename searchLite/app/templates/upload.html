@@ -106,7 +106,7 @@
             <h4>or</h4>
             <form method="post" action="{% url 'upload' %}" enctype="multipart/form-data">
                 {% csrf_token %}
-                <input id="file-input" class="choose-file-btn" type="file" name="file" accept=".jpg, .jpeg, .bmp, .doc, .docx, .csv, .pdf, .txt" multiple>
+                <input id="file-input" class="choose-file-btn" type="file" name="file" accept=".jpg, .jpeg, .bmp, .doc, .docx, .csv, .pdf, .txt, .html, .htm" multiple>
                 <button class="choose-file-btn" type="submit" style="height: 42px;">Upload</button>
             </form>
         {% if message %}
@@ -115,8 +115,8 @@
         <ul id="file-list"></ul>
     </div>
     <div style="display: flex;">
-        <a href="index" style="font-family: 'Dancing Script', cursive; font-size: 18px; color: darkblue; text-decoration: underline;  margin-left: -90%; margin-right: 45%;">Back to Home</a>
-        <a href="search" style="font-family: 'Dancing Script', cursive; font-size: 18px; color: darkblue; text-decoration: underline; margin-left: 190%;">Go to Search</a>
+        <a href="{% url 'homepage' %}" style="font-family: 'Dancing Script', cursive; font-size: 18px; color: darkblue; text-decoration: underline;  margin-left: -90%; margin-right: 45%;">Back to Home</a>
+        <a href="{% url 'search' %}" style="font-family: 'Dancing Script', cursive; font-size: 18px; color: darkblue; text-decoration: underline; margin-left: 190%;">Go to Search</a>
     </div>  
 
     <script>
