@@ -55,6 +55,19 @@
         .search-button:hover {
             background-color: #555;
         }
+        .navigation-buttons a{
+            width: 10%;
+            height: 73%;
+            font-size: 18px;
+            background-color: #4893a0;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+            text-align: center;
+            text-decoration: none;
+            margin-top: 1%;
+        }
     </style>
 </head>
 <body>
@@ -65,6 +78,11 @@
             <input type="text" class="search-input" name="search_input" placeholder="Enter your search query..." style="width: 80%;">
             <button class="search-button" type="submit">Search</button>
         </form>
+    </div>
+    <div class="navigation-buttons" style="display: flex; width: 100%;">
+        <p></p>
+        <a href="{% url 'homepage' %}" style="font-family: 'Dancing Script', cursive; margin-left: 41%; margin-right: 1%;">Back to Home</a>
+        <a href="{% url 'upload' %}" style="font-family: 'Dancing Script', cursive;">Go to Upload</a>
     </div>
 </body>
 </html>

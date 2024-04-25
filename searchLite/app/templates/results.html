@@ -21,14 +21,13 @@
             flex-direction: column; 
         }
         .search-container {
-            width: 50%;
+            width: 40%;
             padding: 20px;
-            background-color: rgba(255, 255, 255, 0.4); /* Transparent white background */
             border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Box shadow for depth */
             display: flex;
             justify-content: center;
             align-items: center;
+            margin-left: 4%;
         }
 
         .search-input {
@@ -96,13 +95,13 @@
     </style>
 </head>
 <body>
-    <h1>Search Results</h1>
+    <h1 style="font-family: 'Dancing Script' , cursive; margin-top: 7%; font-size: 6vh;">Search Results</h1>
     
     <!-- Search bar -->
     <div class="search-container">
-        <form method="post" action="{% url 'search' %}">
+        <form method="post" action="{% url 'search' %}" style="width: 200%;">
             {% csrf_token %}
-            <input type="text" class="search-input" name="search_input" placeholder="Enter your search query..." value="{{ search_query }}">
+            <input type="text" class="search-input" name="search_input" placeholder="Enter your search query..." value="{{ search_query }}" style="width: 80%;">
             <button class="search-button" type="submit">Search</button>
         </form>
     </div>
@@ -136,7 +135,7 @@
         </div>
         {% endfor %}
         {% else %}
-            No Results Found
+            <p>No Results Found</p>
         {% endif %}
     </div>
 
