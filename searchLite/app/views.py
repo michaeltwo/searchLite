@@ -76,46 +76,49 @@ def upload(request):
 
 def search(request):
     if request.method == 'POST':
-        search_query = request.POST.get('search_input', '') 
-        cleaned_and_stemmed_query = clean_and_stem(search_query)
-        
+        search_query = request.POST.get('search_input', '')
+        queries = search_query.split('|||')
+        cleaned_and_stemmed_queries = [clean_and_stem(query) for query in queries]
+
         # Find documents matching the exact sequence of query terms
         result = {}
         try:
-            if len(cleaned_and_stemmed_query) == 1:
-                single_term = cleaned_and_stemmed_query[0]
-                term_postings = postings_collection.find_one({"term": single_term})["positions"]
-                result = {doc_id: {single_term: positions} for doc_id, positions in term_postings.items()}
-            else:
-                first_term = cleaned_and_stemmed_query[0]
-                if first_term in postings_collection.distinct("term"):
-                    first_term_postings = postings_collection.find_one({"term": first_term})["positions"]
-                    for doc_id, positions in first_term_postings.items():
-                        final_positions = {term: [] for term in cleaned_and_stemmed_query}
-                        # Iterate through the positions of the first term
-                        for pos in positions:
-                            term_pos = {first_term: pos}
-                            match = True
-                            # Check if all other terms occur in sequence after the first term
-                            for i, term in enumerate(cleaned_and_stemmed_query[1:], start=1):
-                                term_postings = postings_collection.find_one({"term": term})["positions"]
-                                if doc_id not in term_postings or pos + i not in term_postings[doc_id]:
-                                    match = False
-                                    break
-                                term_pos[term] = pos + i
-                            if match:
-                                # Add the positions to the final result for each term
-                                for term, term_position in term_pos.items():
-                                    final_positions[term].append(term_position)
-                        # If all terms are present in sequence, add the document to the result
-                        if all(len(final_positions[term]) > 0 for term in cleaned_and_stemmed_query):
-                            result[doc_id] = final_positions
+            for cleaned_and_stemmed_query in cleaned_and_stemmed_queries:
+                if len(cleaned_and_stemmed_query) == 1:
+                    single_term = cleaned_and_stemmed_query[0]
+                    term_postings = postings_collection.find_one({"term": single_term})["positions"]
+                    result.update({doc_id: {single_term: positions} for doc_id, positions in term_postings.items()})
+                else:
+                    first_term = cleaned_and_stemmed_query[0]
+                    if first_term in postings_collection.distinct("term"):
+                        first_term_postings = postings_collection.find_one({"term": first_term})["positions"]
+                        for doc_id, positions in first_term_postings.items():
+                            final_positions = {term: [] for term in cleaned_and_stemmed_query}
+                            # Iterate through the positions of the first term
+                            for pos in positions:
+                                term_pos = {first_term: pos}
+                                match = True
+                                # Check if all other terms occur in sequence after the first term
+                                for i, term in enumerate(cleaned_and_stemmed_query[1:], start=1):
+                                    term_postings = postings_collection.find_one({"term": term})["positions"]
+                                    if doc_id not in term_postings or pos + i not in term_postings[doc_id]:
+                                        match = False
+                                        break
+                                    term_pos[term] = pos + i
+                                if match:
+                                    # Add the positions to the final result for each term
+                                    for term, term_position in term_pos.items():
+                                        final_positions[term].append(term_position)
+                            # If all terms are present in sequence, add the document to the result
+                            if all(len(final_positions[term]) > 0 for term in cleaned_and_stemmed_query):
+                                result[doc_id] = final_positions
         except:
             return render(request, 'results.html', {'search_query': search_query})
+        
         # Retrieve the matching documents from your CorpusFile model
         matching_documents = CorpusFile.objects.filter(id__in=result.keys())
 
-                # Calculate file sizes in KB and MB, and format the upload date
+        # Calculate file sizes in KB and MB, and format the upload date
         for document in matching_documents:
             file_size_bytes = os.path.getsize(os.path.join(settings.BASE_DIR, 'corpus', document.stored_file_name))
             document.file_size_kb = round(file_size_bytes / 1024, 2)
@@ -123,11 +126,35 @@ def search(request):
             document.uploaded_date = timezone.localtime(document.uploaded_at).strftime('%Y-%m-%d %H:%M:%S')
 
         return render(request, 'results.html', {'matching_documents': matching_documents, 'search_query': search_query})
+    
     return render(request, 'search.html')
 
 
 def results(request):
     pass
+
+def fetch_document(request, doc_id):
+    document = get_object_or_404(CorpusFile, id=doc_id)
+    pdf_path = os.path.join(settings.BASE_DIR, 'highlighted_pdfs', f'{document.stored_file_name}_highlighted.pdf')
+    return FileResponse(open(pdf_path, 'rb'))
+
+def update_document(request, doc_id):
+    query = request.GET.get('query', '')  
+    if query == '':
+        pass
+    queries = query.split('|||')
+    color = request.GET.get('colors', '')
+    colors = color.split(',')
+
+    # Create a map for query and color
+    query_color_map = dict(zip(queries, colors))
+
+    document = get_object_or_404(CorpusFile, id=doc_id)
+
+    load_document(doc_id, queries, color_map=query_color_map)
+    pdf_path = os.path.join(settings.BASE_DIR, 'highlighted_pdfs', f'{document.stored_file_name}_highlighted.pdf')
+    return FileResponse(open(pdf_path, 'rb'))
+
 
 def load_image_document(request, doc_id):
     document = get_object_or_404(CorpusFile, id=doc_id)
@@ -136,15 +163,20 @@ def load_image_document(request, doc_id):
 
 def view_document(request, doc_id):
     query = request.GET.get('query', '')
-    return render(request, 'doc_viewer.html', {'doc_id': doc_id,'query': query})
+    queries = query.split('|||')
 
-def load_document(request, doc_id):
+    query_counts, query_colors = load_document(doc_id, queries)
+
+    query_info = [(query, query_counts[query], query_colors[query]) for query in queries]
+
+    return render(request, 'doc_viewer.html', {'doc_id': doc_id,'query_info': query_info})
+
+def load_document(doc_id, queries, color_map={}):
     # Get the document object based on the doc_id
     document = get_object_or_404(CorpusFile, id=doc_id)
-    query = request.GET.get('query', '')
 
     if document.stored_file_name.endswith('.pdf'):
-        return view_pdf_document(document, query)
+        return view_pdf_document(document, queries, color_map=color_map)
     elif document.stored_file_name.endswith(('.doc', '.docx')):
         pass
     elif document.stored_file_name.endswith('.csv'):
@@ -152,7 +184,7 @@ def load_document(request, doc_id):
     elif document.stored_file_name.endswith(('.txt', '.text')):
         pass
     elif document.stored_file_name.endswith(('.jpg', '.jpeg', '.png', '.bmp')):
-        return view_image_document(document, query)
+        return view_image_document(document, queries)
     elif document.stored_file_name.endswith(('.html', '.htm')):
         pass
     elif document.stored_file_name.endswith(('.gif')):
@@ -160,17 +192,20 @@ def load_document(request, doc_id):
     else:
         return ''
 
-def view_pdf_document(document, query):
+def view_pdf_document(document, queries, color_map={}):
     pdf_path = os.path.join(settings.BASE_DIR, 'corpus', document.stored_file_name)
     
     # Check if the file exists and is a PDF
     if not os.path.exists(pdf_path) or not pdf_path.endswith('.pdf'):
         return HttpResponseBadRequest("Invalid PDF file.")
 
-    if query:
-        pdf_path = highlight_text_in_pdf(pdf_path, document.stored_file_name, query)
+    if queries:
+        try:
+            pdf_path, query_counts, query_colors = highlight_text_in_pdf(pdf_path, document.stored_file_name, queries, color_map=color_map)
+        except Exception as e:
+            print(e)
 
-    return FileResponse(open(pdf_path, 'rb'))
+    return query_counts, query_colors
 
 def view_image_document(document, query):
     image_path = os.path.join(settings.BASE_DIR, 'corpus', document.stored_file_name)

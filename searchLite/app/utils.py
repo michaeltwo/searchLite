@@ -63,14 +63,14 @@ def generate_file_hash(file):
         print(f"Error generating file hash: {e}")
         return None
 
-def highlight_text_in_pdf(pdf_path, file_name, query):
+def highlight_text_in_pdf(pdf_path, file_name, queries, color_map={}):
     """
-    Highlight text in a PDF file based on a query.
+    Highlight text in a PDF file based on multiple queries.
 
     Args:
         pdf_path (str): The path to the PDF file.
         file_name (str): The name of the file.
-        query (str): The query to highlight.
+        queries (list): List of queries to highlight.
 
     Returns:
         str: The path to the highlighted PDF file.
@@ -78,12 +78,28 @@ def highlight_text_in_pdf(pdf_path, file_name, query):
     pdf_document = fitz.open(pdf_path)
     output_pdf = fitz.open()
 
+    colors = [color.lower() for color in ["YELLOW", "SKYBLUE", "ORANGE", "LIGHTBLUE",
+              "LIGHTCYAN", "LIGHTGREEN", "YELLOWGREEN", "LIGHTPINK",
+              "LIGHTSALMON", "LIGHTYELLOW"]]
+
+    if color_map:
+        query_colors = color_map
+    else:
+        query_colors = {query: colors[i % len(colors)] for i, query in enumerate(queries)}
+    
+    query_counts = {query: 0 for query in queries}
+
     for page_number in range(len(pdf_document)):
         page = pdf_document[page_number]
         text = page.get_text()
-        if query.lower() in text.lower():
-            for instance in page.search_for(query):
-                page.add_highlight_annot(instance)
+        for query in queries:
+            if query.lower() in text.lower():
+                for instance in page.search_for(query):
+                    highlight = page.add_highlight_annot(instance)
+                    highlight.set_colors(stroke=fitz.pdfcolor[query_colors[query]])  # use preassigned color for each query
+                    highlight.update()  # update annotation
+                    query_counts[query] += 1
+
         output_pdf.insert_pdf(pdf_document, from_page=page_number, to_page=page_number)
 
     highlighted_pdf_path = os.path.join(settings.BASE_DIR, 'highlighted_pdfs', f'{file_name}_highlighted.pdf')
@@ -91,4 +107,5 @@ def highlight_text_in_pdf(pdf_path, file_name, query):
     output_pdf.close()
     pdf_document.close()
 
-    return highlighted_pdf_path
+    return highlighted_pdf_path, query_counts, query_colors
+
