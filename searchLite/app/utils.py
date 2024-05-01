@@ -89,9 +89,12 @@ def highlight_text_in_pdf(pdf_path, file_name, queries, color_map={}):
     
     query_counts = {query: 0 for query in queries}
 
+    # Regular expression to remove escape characters
+    escape_chars = re.compile(r'[\n\t\r]')
+
     for page_number in range(len(pdf_document)):
         page = pdf_document[page_number]
-        text = page.get_text()
+        text = escape_chars.sub('', page.get_text())  # Remove escape characters from text
         for query in queries:
             if query.lower() in text.lower():
                 for instance in page.search_for(query):
