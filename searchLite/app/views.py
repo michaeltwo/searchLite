@@ -10,8 +10,6 @@ from .text_extractor import *
 from .mongo_services import *
 from docx2pdf import convert
 from docx import Document
-from spire.doc import *
-from spire.doc.common import *
 import comtypes.client
 from .utils import *
 import filetype
