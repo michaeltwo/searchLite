@@ -7,13 +7,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Search Results</title>
     <style>
-        /* Your existing CSS styles here */
         body {
             font-family: Arial, sans-serif;
             margin: 0;
             padding: 0;
-            background-image: url("{% static 'slidedown.jpg' %}");
-            background-size: cover;
+            background-color: #84BEC9;
             background-position: center;
             height: 100vh;
             display: flex;
@@ -59,12 +57,12 @@
             padding: 10px;
             border: 1px solid #ddd;
             border-radius: 5px;
-            background-color: #fff;
+            background-color: rgba(255, 255, 255, 0.5);
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
             width: 100%;
+            align-items: center;
         }
 
-        /* Additional styles for filter buttons */
         .filter-buttons {
             margin-top: 20px;
         }
@@ -80,12 +78,15 @@
         }
 
         .filter-button:hover {
-            background-color: blue;
+            background-color: yellowgreen;
+            border-color: green;
+            border-width: 50%;
         }
 
-        /* Active filter button style */
         .filter-button.active {
-            background-color: blue;
+            background-color: yellow;
+            border-color: green;
+            border-width: 25%;
         }
         .document-image {
             height: 300px;
@@ -106,7 +107,7 @@
     </div>
 
     <!-- Filter buttons -->
-    <div class="filter-buttons">
+    <div class="filter-buttons" style="margin-bottom: 1%;">
         <button id="allFilterButton" class="filter-button active" data-filter="all">All</button>
         <button id="pdfFilterButton" class="filter-button" data-filter="pdf">PDF</button>
         <button id="imagesFilterButton" class="filter-button" data-filter="images">Images</button>
@@ -118,7 +119,7 @@
     </div>
 
     <!-- Results container -->
-    <div class="results-container">
+    <div class="results-container" style="width: 60%;">
         {% if matching_documents %}
         {% for document in matching_documents %}
         <div class="document-card" data-type="{{ document.file_type }}">
@@ -130,7 +131,7 @@
             <button class="show-image-button">Show Image</button>
             <img class="document-image" src="{% url 'load_image_document' document.id %}" alt="Document Image" style="display: none;">
             {% endif %}
-            <a href="/searchLite/view/{{ document.id }}?query={{ search_query }}" target="_blank">View Document</a>
+            <a href="/searchLite/view/{{ document.id }}?query={{ search_query }}" target="_blank">Click here to view Document</a>
         </div>
         {% endfor %}
         {% else %}
