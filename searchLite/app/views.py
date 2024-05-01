@@ -9,8 +9,6 @@ from datetime import datetime
 from .text_extractor import *
 from .mongo_services import *
 from docx2pdf import convert
-from docx import Document
-import comtypes.client
 from .utils import *
 import filetype
 import pythoncom
@@ -147,7 +145,9 @@ def fetch_document(request, doc_id):
 def update_document(request, doc_id):
     query = request.GET.get('query', '')  
     if query == '':
-        pass
+        document = get_object_or_404(CorpusFile, id=doc_id)
+        pdf_path = os.path.join(settings.BASE_DIR, 'highlighted_pdfs', f'{document.stored_file_name}.pdf')
+        return FileResponse(open(pdf_path, 'rb'))
     queries = query.split('|||')
     color = request.GET.get('colors', '')
     colors = color.split(',')
