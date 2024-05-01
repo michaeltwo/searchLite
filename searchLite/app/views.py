@@ -8,7 +8,11 @@ from .models import CorpusFile
 from datetime import datetime
 from .text_extractor import *
 from .mongo_services import *
+from docx2pdf import convert
 from docx import Document
+from spire.doc import *
+from spire.doc.common import *
+import comtypes.client
 from .utils import *
 import filetype
 import shutil
@@ -135,7 +139,10 @@ def results(request):
 
 def fetch_document(request, doc_id):
     document = get_object_or_404(CorpusFile, id=doc_id)
-    pdf_path = os.path.join(settings.BASE_DIR, 'highlighted_pdfs', f'{document.stored_file_name}_highlighted.pdf')
+    if document.stored_file_name.endswith('.pdf'):
+        pdf_path = os.path.join(settings.BASE_DIR, 'highlighted_pdfs', f'{document.stored_file_name}_highlighted.pdf')
+    else:
+        pdf_path = os.path.join(settings.BASE_DIR, 'highlighted_pdfs', f'{document.stored_file_name}.pdf_highlighted.pdf')
     return FileResponse(open(pdf_path, 'rb'))
 
 def update_document(request, doc_id):
@@ -149,10 +156,9 @@ def update_document(request, doc_id):
     # Create a map for query and color
     query_color_map = dict(zip(queries, colors))
 
-    document = get_object_or_404(CorpusFile, id=doc_id)
+    filename, query_counts, query_colors = load_document(doc_id, queries, color_map=query_color_map)
 
-    load_document(doc_id, queries, color_map=query_color_map)
-    pdf_path = os.path.join(settings.BASE_DIR, 'highlighted_pdfs', f'{document.stored_file_name}_highlighted.pdf')
+    pdf_path = os.path.join(settings.BASE_DIR, 'highlighted_pdfs', f'{filename}_highlighted.pdf')
     return FileResponse(open(pdf_path, 'rb'))
 
 
@@ -165,7 +171,7 @@ def view_document(request, doc_id):
     query = request.GET.get('query', '')
     queries = query.split('|||')
 
-    query_counts, query_colors = load_document(doc_id, queries)
+    filename, query_counts, query_colors = load_document(doc_id, queries)
 
     query_info = [(query, query_counts[query], query_colors[query]) for query in queries]
 
@@ -176,9 +182,25 @@ def load_document(doc_id, queries, color_map={}):
     document = get_object_or_404(CorpusFile, id=doc_id)
 
     if document.stored_file_name.endswith('.pdf'):
-        return view_pdf_document(document, queries, color_map=color_map)
+        pdf_path = os.path.join(settings.BASE_DIR, 'corpus', document.stored_file_name)
+        destination_path = os.path.join(settings.BASE_DIR, 'highlighted_pdfs', document.stored_file_name)
+        shutil.copy(pdf_path, destination_path)
+        return view_pdf_document(destination_path, document.stored_file_name, queries, color_map=color_map)
     elif document.stored_file_name.endswith(('.doc', '.docx')):
-        pass
+        # Convert DOCX to PDF and then view the PDF document
+        try:
+
+            docx_file = os.path.join(settings.BASE_DIR, 'corpus', document.stored_file_name)
+            pdf_file = os.path.join(settings.BASE_DIR, 'highlighted_pdfs', f"{document.stored_file_name}.pdf")
+            convert(docx_file, pdf_file)
+
+            pdf_path = pdf_file
+           
+            return view_pdf_document(pdf_path, f"{document.stored_file_name}.pdf", queries, color_map=color_map)
+            
+        except Exception as e:
+            print(f"Error converting DOCX to PDF: {e}")
+            return None, None
     elif document.stored_file_name.endswith('.csv'):
         pass
     elif document.stored_file_name.endswith(('.txt', '.text')):
@@ -192,8 +214,7 @@ def load_document(doc_id, queries, color_map={}):
     else:
         return ''
 
-def view_pdf_document(document, queries, color_map={}):
-    pdf_path = os.path.join(settings.BASE_DIR, 'corpus', document.stored_file_name)
+def view_pdf_document(pdf_path, filename, queries, color_map={}):
     
     # Check if the file exists and is a PDF
     if not os.path.exists(pdf_path) or not pdf_path.endswith('.pdf'):
@@ -201,11 +222,11 @@ def view_pdf_document(document, queries, color_map={}):
 
     if queries:
         try:
-            pdf_path, query_counts, query_colors = highlight_text_in_pdf(pdf_path, document.stored_file_name, queries, color_map=color_map)
+            pdf_path, query_counts, query_colors = highlight_text_in_pdf(pdf_path, filename, queries, color_map=color_map)
         except Exception as e:
             print(e)
 
-    return query_counts, query_colors
+    return filename, query_counts, query_colors
 
 def view_image_document(document, query):
     image_path = os.path.join(settings.BASE_DIR, 'corpus', document.stored_file_name)
