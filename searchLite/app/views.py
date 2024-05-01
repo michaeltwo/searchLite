@@ -15,6 +15,7 @@ from spire.doc.common import *
 import comtypes.client
 from .utils import *
 import filetype
+import pythoncom
 import shutil
 import os
 
@@ -192,7 +193,7 @@ def load_document(doc_id, queries, color_map={}):
 
             docx_file = os.path.join(settings.BASE_DIR, 'corpus', document.stored_file_name)
             pdf_file = os.path.join(settings.BASE_DIR, 'highlighted_pdfs', f"{document.stored_file_name}.pdf")
-            convert(docx_file, pdf_file)
+            convert(docx_file, pdf_file, pythoncom.CoInitialize())
 
             pdf_path = pdf_file
            
