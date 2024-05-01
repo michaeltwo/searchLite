@@ -14,6 +14,13 @@ import filetype
 import pythoncom
 import shutil
 import os
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import letter
+from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.enums import TA_LEFT
+from reportlab.platypus import SimpleDocTemplate, Paragraph
 
 def homepage(request):
     return render(request, 'index.html')
@@ -202,8 +209,20 @@ def load_document(doc_id, queries, color_map={}):
             return None, None
     elif document.stored_file_name.endswith('.csv'):
         pass
-    elif document.stored_file_name.endswith(('.txt', '.text')):
-        pass
+    elif document.stored_file_name.endswith('.txt'):
+        # Convert TXT to PDF
+        try:
+            txt_file = os.path.join(settings.BASE_DIR, 'corpus', document.stored_file_name)
+            pdf_file = os.path.join(settings.BASE_DIR, 'highlighted_pdfs', f"{document.stored_file_name}.pdf")
+            convert_txt_to_pdf(txt_file, pdf_file)
+
+            pdf_path = pdf_file
+           
+            return view_pdf_document(pdf_path, f"{document.stored_file_name}.pdf", queries, color_map=color_map)
+            
+        except Exception as e:
+            print(f"Error converting TXT to PDF: {e}")
+            return None, None
     elif document.stored_file_name.endswith(('.jpg', '.jpeg', '.png', '.bmp')):
         return view_image_document(document, queries)
     elif document.stored_file_name.endswith(('.html', '.htm')):
@@ -247,6 +266,28 @@ def process_documents(file_hashes):
         corpus_file.processed = True
         corpus_file.save()
 
+def convert_txt_to_pdf(txt_file, pdf_file):
+    # Create a SimpleDocTemplate object with specified page size
+    doc = SimpleDocTemplate(pdf_file, pagesize=letter)
+    
+    # Read the text from the TXT file
+    with open(txt_file, 'r') as file:
+        lines = file.readlines()
+
+    # Create a list to hold Paragraph objects
+    story = []
+
+    # Set styles for paragraphs
+    styles = getSampleStyleSheet()
+    normal_style = styles['Normal']
+    normal_style.alignment = TA_LEFT
+
+    # Add each line of text as a Paragraph object to the story list
+    for line in lines:
+        story.append(Paragraph(line.strip(), normal_style))
+
+    # Add story to document
+    doc.build(story)
 
 
     
