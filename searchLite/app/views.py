@@ -8,16 +8,21 @@ from .models import CorpusFile
 from datetime import datetime
 from .text_extractor import *
 from .mongo_services import *
+from docx2pdf import convert
 from docx import Document
+import comtypes.client
 from .utils import *
 import filetype
+import pythoncom
 import shutil
 import os
-import docx2pdf
-from docx2pdf import convert
-import subprocess
-from tempfile import NamedTemporaryFile
-import comtypes.client
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import letter
+from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.enums import TA_LEFT
+from reportlab.platypus import SimpleDocTemplate, Paragraph
 
 def homepage(request):
     return render(request, 'index.html')
@@ -140,7 +145,10 @@ def results(request):
 
 def fetch_document(request, doc_id):
     document = get_object_or_404(CorpusFile, id=doc_id)
-    pdf_path = os.path.join(settings.BASE_DIR, 'highlighted_pdfs', f'{document.stored_file_name}_highlighted.pdf')
+    if document.stored_file_name.endswith('.pdf'):
+        pdf_path = os.path.join(settings.BASE_DIR, 'highlighted_pdfs', f'{document.stored_file_name}_highlighted.pdf')
+    else:
+        pdf_path = os.path.join(settings.BASE_DIR, 'highlighted_pdfs', f'{document.stored_file_name}.pdf_highlighted.pdf')
     return FileResponse(open(pdf_path, 'rb'))
 
 def update_document(request, doc_id):
@@ -154,10 +162,9 @@ def update_document(request, doc_id):
     # Create a map for query and color
     query_color_map = dict(zip(queries, colors))
 
-    document = get_object_or_404(CorpusFile, id=doc_id)
+    filename, query_counts, query_colors = load_document(doc_id, queries, color_map=query_color_map)
 
-    load_document(doc_id, queries, color_map=query_color_map)
-    pdf_path = os.path.join(settings.BASE_DIR, 'highlighted_pdfs', f'{document.stored_file_name}_highlighted.pdf')
+    pdf_path = os.path.join(settings.BASE_DIR, 'highlighted_pdfs', f'{filename}_highlighted.pdf')
     return FileResponse(open(pdf_path, 'rb'))
 
 
@@ -170,48 +177,52 @@ def view_document(request, doc_id):
     query = request.GET.get('query', '')
     queries = query.split('|||')
 
-    query_counts, query_colors = load_document(doc_id, queries)
-
-    if query_counts is None or query_colors is None:
-        return render(request, 'doc_viewer.html', {'doc_id': doc_id, 'error': 'Error processing the document.'})
+    filename, query_counts, query_colors = load_document(doc_id, queries)
 
     query_info = [(query, query_counts[query], query_colors[query]) for query in queries]
 
-    return render(request, 'doc_viewer.html', {'doc_id': doc_id, 'query_info': query_info})
+    return render(request, 'doc_viewer.html', {'doc_id': doc_id,'query_info': query_info})
 
 def load_document(doc_id, queries, color_map={}):
     # Get the document object based on the doc_id
     document = get_object_or_404(CorpusFile, id=doc_id)
 
     if document.stored_file_name.endswith('.pdf'):
-        return view_pdf_document(document, queries, color_map=color_map)
+        pdf_path = os.path.join(settings.BASE_DIR, 'corpus', document.stored_file_name)
+        destination_path = os.path.join(settings.BASE_DIR, 'highlighted_pdfs', document.stored_file_name)
+        shutil.copy(pdf_path, destination_path)
+        return view_pdf_document(destination_path, document.stored_file_name, queries, color_map=color_map)
     elif document.stored_file_name.endswith(('.doc', '.docx')):
         # Convert DOCX to PDF and then view the PDF document
         try:
-            if document.stored_file_name.endswith('.docx'):
-                # Convert DOCX to PDF
-                docx_file = os.path.join(settings.BASE_DIR, 'corpus', document.stored_file_name)
-                pdf_file = os.path.join(settings.BASE_DIR, 'corpus', f"{document.stored_file_name.split('.')[0]}.pdf")
-                word = comtypes.client.CreateObject('Word.Application')
-                doc = word.Documents.Open(docx_file)
-                doc.SaveAs(pdf_file, FileFormat=17)  
-                doc.Close()
-                word.Quit()
-                pdf_path = pdf_file
-            else:
-                # Handle DOC files using another method if needed
-                pass
-            query_counts, query_colors = view_pdf_document(document, queries, pdf_path, color_map=color_map)
-            return query_counts, query_colors
+
+            docx_file = os.path.join(settings.BASE_DIR, 'corpus', document.stored_file_name)
+            pdf_file = os.path.join(settings.BASE_DIR, 'highlighted_pdfs', f"{document.stored_file_name}.pdf")
+            convert(docx_file, pdf_file, pythoncom.CoInitialize())
+
+            pdf_path = pdf_file
+           
+            return view_pdf_document(pdf_path, f"{document.stored_file_name}.pdf", queries, color_map=color_map)
+            
         except Exception as e:
             print(f"Error converting DOCX to PDF: {e}")
             return None, None
     elif document.stored_file_name.endswith('.csv'):
         pass
-    elif document.stored_file_name.endswith(('.txt', '.text')):
-        pass
-    elif document.stored_file_name.endswith('.csv'):
-        pass
+    elif document.stored_file_name.endswith('.txt'):
+        # Convert TXT to PDF
+        try:
+            txt_file = os.path.join(settings.BASE_DIR, 'corpus', document.stored_file_name)
+            pdf_file = os.path.join(settings.BASE_DIR, 'highlighted_pdfs', f"{document.stored_file_name}.pdf")
+            convert_txt_to_pdf(txt_file, pdf_file)
+
+            pdf_path = pdf_file
+           
+            return view_pdf_document(pdf_path, f"{document.stored_file_name}.pdf", queries, color_map=color_map)
+            
+        except Exception as e:
+            print(f"Error converting TXT to PDF: {e}")
+            return None, None
     elif document.stored_file_name.endswith(('.jpg', '.jpeg', '.png', '.bmp')):
         return view_image_document(document, queries)
     elif document.stored_file_name.endswith(('.html', '.htm')):
@@ -219,35 +230,21 @@ def load_document(doc_id, queries, color_map={}):
     elif document.stored_file_name.endswith(('.gif')):
         pass
     else:
-        return '', None, None
+        return ''
 
-def view_pdf_document(document, queries, pdf_path=None, color_map={}):
-    if pdf_path is None:
-        if document.stored_file_name.endswith('.pdf'):
-            pdf_path = os.path.join(settings.BASE_DIR, 'corpus', document.stored_file_name)
-        else:
-            # Convert text file to PDF first
-            txt_file = os.path.join(settings.BASE_DIR, 'corpus', document.stored_file_name)
-            pdf_document = fitz.open()
-            with open(txt_file, 'r') as file:
-                text = file.read()
-                pdf_document.insert_pdf(fitz.from_text(text, rect=fitz.Rect(0, 0, 612, 792)))
-            pdf_path = os.path.join(settings.BASE_DIR, 'highlighted_pdfs', f"{document.stored_file_name.split('.')[0]}.pdf")
-            pdf_document.save(pdf_path)
-            pdf_document.close()
-
+def view_pdf_document(pdf_path, filename, queries, color_map={}):
+    
     # Check if the file exists and is a PDF
     if not os.path.exists(pdf_path) or not pdf_path.endswith('.pdf'):
-        return None, None
+        return HttpResponseBadRequest("Invalid PDF file.")
 
     if queries:
         try:
-            highlighted_pdf_path, query_counts, query_colors = highlight_text_in_pdf(pdf_path, document.stored_file_name, queries, color_map=color_map)
+            pdf_path, query_counts, query_colors = highlight_text_in_pdf(pdf_path, filename, queries, color_map=color_map)
         except Exception as e:
             print(e)
-            return None, None
 
-    return query_counts, query_colors
+    return filename, query_counts, query_colors
 
 def view_image_document(document, query):
     image_path = os.path.join(settings.BASE_DIR, 'corpus', document.stored_file_name)
@@ -268,3 +265,41 @@ def process_documents(file_hashes):
         # Update the CorpusFile object to mark processing as completed
         corpus_file.processed = True
         corpus_file.save()
+
+def convert_txt_to_pdf(txt_file, pdf_file):
+    # Create a SimpleDocTemplate object with specified page size
+    doc = SimpleDocTemplate(pdf_file, pagesize=letter)
+    
+    # Read the text from the TXT file
+    with open(txt_file, 'r') as file:
+        lines = file.readlines()
+
+    # Create a list to hold Paragraph objects
+    story = []
+
+    # Set styles for paragraphs
+    styles = getSampleStyleSheet()
+    normal_style = styles['Normal']
+    normal_style.alignment = TA_LEFT
+
+    # Add each line of text as a Paragraph object to the story list
+    for line in lines:
+        story.append(Paragraph(line.strip(), normal_style))
+
+    # Add story to document
+    doc.build(story)
+
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
