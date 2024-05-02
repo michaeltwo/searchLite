@@ -55,14 +55,29 @@ Certainly! Here's the information in a formatted list:
 
 - **Add the Tesseract installation directory to your system's PATH.**
 
+- **Add Path Variable**
+
+
+  ![alt text](image-1.png)
+
+- **Edit path Variable**
+
+  ![alt text](image-2.png)
+
 - `Install PyTesseract:`
 
    ```bash
    pip install pytesseract
    ```
-5. Set you postgres database password in setting.py
+5. Create and Set you postgres database details.
 
-![alt text](image.png)
+- Create database **SearchLite** in postgres database
+
+   ![alt text](image.png)
+
+6. Create database **SearchLite** and Collection **Posting**.
+
+   ![alt text](image-3.png)
 
 6. Run the Django development server:
 
@@ -75,15 +90,16 @@ Certainly! Here's the information in a formatted list:
 ## Usage
 
 1. **Homepage**: Access the homepage of the application.
-
+  ![alt text](image-4.png)
+  ![alt text](image-5.png)
 2. **Upload**: Upload multiple documents of supported file types.
-
+  ![alt text](image-6.png)
 3. **Search**: Enter multiple queries to search for relevant documents.
-
+  ![alt text](image-7.png)
 4. **Results**: View search results and filter them based on specific criteria.
-
+  ![alt text](image-8.png)
 5. **Document Viewer**: View documents with highlighted terms in PDF format.
-
+  ![alt text](image-9.png)
 ## Technologies Used
 
 Certainly! Here's the list of technologies used in SearchLite in the requested format:
