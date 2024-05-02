@@ -79,8 +79,8 @@ def highlight_text_in_pdf(pdf_path, file_name, queries, color_map={}):
     output_pdf = fitz.open()
 
     colors = [color.lower() for color in ["YELLOW", "SKYBLUE", "ORANGE", "LIGHTBLUE",
-              "LIGHTCYAN", "LIGHTGREEN", "YELLOWGREEN", "LIGHTPINK",
-              "LIGHTSALMON", "LIGHTYELLOW"]]
+              "ROSYBROWN", "LIGHTGREEN", "YELLOWGREEN", "LIGHTPINK",
+              "LIGHTSALMON", "DARKGOLDENROD"]]
 
     if color_map:
         query_colors = color_map
