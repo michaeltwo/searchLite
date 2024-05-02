@@ -75,7 +75,7 @@
     <div class="search-container">
         <form method="post" action="{% url 'search' %}" style="width: 120%;" onsubmit="return validateSearch()">
             {% csrf_token %}
-            <input type="text" class="search-input" name="search_input" id="searchInput" placeholder="Enter your search query..." style="width: 80%;">
+            <input type="text" class="search-input" name="search_input" id="searchInput" placeholder="Enter your search query(use '|||' delimiter for multiple queries)..." style="width: 80%;">
             <button class="search-button" type="submit">Search</button>
         </form>
     </div>

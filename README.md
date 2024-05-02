@@ -78,14 +78,17 @@ Certainly! Here's the information in a formatted list:
 6. Create database **SearchLite** and Collection **Posting**.
 
    ![alt text](searchLite/searchLite/static/image-3.png)
+   
+   If you are running mongoDB server on different URL then update the details in mongo_services.py file as below
+   ![alt text](searchLite/searchLite/static/image-10.png)
 
-6. Run the Django development server:
+7. Run the Django development server:
 
    ```bash
    python manage.py runserver
    ```
 
-7. Access the application at [http://127.0.0.1:8000/](http://127.0.0.1:8000/).
+8. Access the application at [http://127.0.0.1:8000/](http://127.0.0.1:8000/).
 
 ## Usage
 

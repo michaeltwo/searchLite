@@ -189,7 +189,7 @@ def load_document(doc_id, queries, color_map={}):
 
     if document.stored_file_name.endswith('.pdf'):
         pdf_path = os.path.join(settings.BASE_DIR, 'corpus', document.stored_file_name)
-        destination_path = os.path.join(settings.BASE_DIR, 'highlighted_pdfs', document.stored_file_name)
+        destination_path = os.path.join(settings.BASE_DIR, 'highlighted_pdfs', f"{document.stored_file_name}.pdf")
         shutil.copy(pdf_path, destination_path)
         return view_pdf_document(destination_path, document.stored_file_name, queries, color_map=color_map)
     elif document.stored_file_name.endswith(('.doc', '.docx')):
