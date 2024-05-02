@@ -73,9 +73,9 @@
 <body>
     <h1 style="max-width: 100%; font-family: 'Dancing Script' , cursive; font-size: 7vh; margin-top: -120px; margin-bottom: 10px;">Search for it!</h1>
     <div class="search-container">
-        <form method="post" action="{% url 'search' %}" style="width: 120%;">
+        <form method="post" action="{% url 'search' %}" style="width: 120%;" onsubmit="return validateSearch()">
             {% csrf_token %}
-            <input type="text" class="search-input" name="search_input" placeholder="Enter your search query..." style="width: 80%;">
+            <input type="text" class="search-input" name="search_input" id="searchInput" placeholder="Enter your search query..." style="width: 80%;">
             <button class="search-button" type="submit">Search</button>
         </form>
     </div>
@@ -84,5 +84,19 @@
         <a href="{% url 'homepage' %}" style="font-family: 'Dancing Script', cursive; margin-left: 41%; margin-right: 1%;">Back to Home</a>
         <a href="{% url 'upload' %}" style="font-family: 'Dancing Script', cursive;">Go to Upload</a>
     </div>
+
+    <script>
+        function validateSearch() {
+            console.log("test")
+            var searchInput = document.getElementById('searchInput').value.trim();
+    
+            // Check if search input is empty or ends with "|||"
+            if (searchInput === '' || searchInput.endsWith('|||')) {
+                alert('Please enter a valid search query.');
+                return false; // Prevent form submission
+            }
+            return true; // Allow form submission
+        }
+    </script>
 </body>
 </html>

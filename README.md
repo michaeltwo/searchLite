@@ -12,6 +12,7 @@ Certainly! Here's the information in a formatted list:
 - **Document Indexing:** SearchLite indexes documents to enable efficient and quick retrieval of relevant content.
 - **Responsive Interface:** The web-based interface allows users to interact with the search engine seamlessly across different devices.
 - **Upload Multiple Documents:** Users can upload multiple documents of supported file types.
+- **Can't Upload Same Documents:** Storing hash value of each file in postgres to restrict user from upload same documents again.
 - **Search Multiple Queries:** Users can search multiple queries to find relevant documents.
 - **Filter Search Results:** Users can filter search results based on specific criteria.
 - **View Documents with Highlighted Terms:** Users can view documents with highlighted terms, particularly in PDF format.
@@ -36,13 +37,40 @@ Certainly! Here's the information in a formatted list:
    pip install -r requirements.txt
    ```
 
-4. Run the Django development server:
+4. Install Tesseract OCR:
+
+- `Linux:`
+
+   ```bash
+   sudo apt-get install tesseract-ocr
+   ```
+- `macOS (using Homebrew):`
+
+   ```bash
+   brew install tesseract
+   ```
+- `Windows:`
+
+- **Download and install Tesseract from the official GitHub repository: Tesseract OCR.**
+
+- **Add the Tesseract installation directory to your system's PATH.**
+
+- `Install PyTesseract:`
+
+   ```bash
+   pip install pytesseract
+   ```
+5. Set you postgres database password in setting.py
+
+![alt text](image.png)
+
+6. Run the Django development server:
 
    ```bash
    python manage.py runserver
    ```
 
-5. Access the application at [http://127.0.0.1:8000/](http://127.0.0.1:8000/).
+7. Access the application at [http://127.0.0.1:8000/](http://127.0.0.1:8000/).
 
 ## Usage
 

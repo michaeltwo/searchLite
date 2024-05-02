@@ -11,7 +11,8 @@
             font-family: Arial, sans-serif;
             margin: 0;
             padding: 0;
-            background-color: #84BEC9;
+            background-image: url("{% static 'slidedown.jpg' %}");
+            background-size: cover;
             background-position: center;
             height: 100vh;
             display: flex;
@@ -92,16 +93,45 @@
             height: 300px;
             width: 500px;
         }
+        .header-buttons{
+            display: flex;
+            justify-content: flex-end;
+            margin-right: 4%;
+        }
+        a{
+            background-color: #333;
+            color: white;
+            padding: 10px 20px;
+            font-size: 15px;
+            border-radius: 5px;
+            text-decoration: none;
+            margin-left: 10px;
+            margin-top: 8%;
+            margin-right: -215%;
+            margin-bottom: -10%;
+        }
+
+        a:hover {
+            background-color: #555;
+        }
+        a{
+            color:white;
+            text-decoration: none;
+        }
     </style>
 </head>
 <body>
-    <h1 style="font-family: 'Dancing Script' , cursive; margin-top: 7%; font-size: 6vh;">Search Results</h1>
+    <div style="display: flex; justify-content: flex-end; margin-right: 4%;">
+        <a href="{% url 'homepage' %}" style="margin-right: 10px;">Back to Home</a>
+        <a href="{% url 'upload' %}">Go to Upload</a>
+    </div>
+    <h1 style="font-family: 'Dancing Script' , cursive; margin-top: 7%; font-size: 7vh;">Search Results</h1>
     
     <!-- Search bar -->
     <div class="search-container">
-        <form method="post" action="{% url 'search' %}" style="width: 200%;">
+        <form method="post" action="{% url 'search' %}" style="width: 200%;" onsubmit="return validateSearch()">
             {% csrf_token %}
-            <input type="text" class="search-input" name="search_input" placeholder="Enter your search query..." value="{{ search_query }}" style="width: 80%;">
+            <input type="text" class="search-input" name="search_input" id="searchInput" placeholder="Enter your search query..." value="{{ search_query }}" style="width: 80%;">
             <button class="search-button" type="submit">Search</button>
         </form>
     </div>
@@ -131,13 +161,28 @@
             <button class="show-image-button">Show Image</button>
             <img class="document-image" src="{% url 'load_image_document' document.id %}" alt="Document Image" style="display: none;">
             {% endif %}
-            <a href="/searchLite/view/{{ document.id }}?query={{ search_query }}" target="_blank">Click here to view Document</a>
+            <a href="/searchLite/view/{{ document.id }}?query={{ search_query }}" target="_blank" style="font-size: small; margin-left: 0%;">Click here to view Document</a>
+            <p></p>
         </div>
         {% endfor %}
         {% else %}
             <p>No Results Found</p>
         {% endif %}
     </div>
+
+    <script>
+        function validateSearch() {
+            console.log("test")
+            var searchInput = document.getElementById('searchInput').value.trim();
+    
+            // Check if search input is empty or ends with "|||"
+            if (searchInput === '' || searchInput.endsWith('|||')) {
+                alert('Please enter a valid search query.');
+                return false; // Prevent form submission
+            }
+            return true; // Allow form submission
+        }
+    </script>
 
     <script>
         filter_mime_types = {
