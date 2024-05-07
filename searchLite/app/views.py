@@ -145,6 +145,11 @@ def fetch_document(request, doc_id):
     document = get_object_or_404(CorpusFile, id=doc_id)
     if document.stored_file_name.endswith('.pdf'):
         pdf_path = os.path.join(settings.BASE_DIR, 'highlighted_pdfs', f'{document.stored_file_name}_highlighted.pdf')
+
+    elif document.stored_file_name.endswith(('.html', '.htm')):
+        html_path = os.path.join(settings.BASE_DIR, 'highlighted_pdfs', f'{document.stored_file_name}.html')
+        return FileResponse(open(html_path, 'rb'), content_type='text/html')
+    
     else:
         pdf_path = os.path.join(settings.BASE_DIR, 'highlighted_pdfs', f'{document.stored_file_name}.pdf_highlighted.pdf')
     return FileResponse(open(pdf_path, 'rb'))
@@ -179,9 +184,19 @@ def view_document(request, doc_id):
 
     filename, query_counts, query_colors = load_document(doc_id, queries)
 
-    query_info = [(query, query_counts[query], query_colors[query]) for query in queries]
+    if filename.endswith(('.html', '.htm')):
+        html_path = os.path.join(settings.BASE_DIR, 'corpus', filename)
+        with open(html_path, 'r', encoding='utf-8') as f:
+            html_content = f.read()
 
-    return render(request, 'doc_viewer.html', {'doc_id': doc_id,'query_info': query_info})
+        return render(request, 'doc_viewer.html', {'doc_id': doc_id, 'query_info': [], 'html_content': html_content})
+
+    query_info = []
+    for query in queries:
+        if query in query_counts and query in query_colors:
+            query_info.append((query, query_counts[query], query_colors[query]))
+
+    return render(request, 'doc_viewer.html', {'doc_id': doc_id, 'query_info': query_info})
 
 def load_document(doc_id, queries, color_map={}):
     # Get the document object based on the doc_id
@@ -226,7 +241,10 @@ def load_document(doc_id, queries, color_map={}):
     elif document.stored_file_name.endswith(('.jpg', '.jpeg', '.png', '.bmp')):
         return view_image_document(document, queries)
     elif document.stored_file_name.endswith(('.html', '.htm')):
-        pass
+        html_path = os.path.join(settings.BASE_DIR, 'corpus', document.stored_file_name)
+        destination_path = os.path.join(settings.BASE_DIR, 'highlighted_pdfs', f"{document.stored_file_name}.html")
+        shutil.copy(html_path, destination_path)
+        return view_html_document(destination_path, document.stored_file_name, queries, color_map=color_map)
     elif document.stored_file_name.endswith(('.gif')):
         pass
     else:
@@ -288,6 +306,24 @@ def convert_txt_to_pdf(txt_file, pdf_file):
 
     # Add story to document
     doc.build(story)
+
+
+def view_html_document(html_path, filename, queries, color_map={}):
+    # Check if the file exists and is an HTML file
+    if not os.path.exists(html_path) or not html_path.endswith(('.html', '.htm')):
+        return HttpResponseBadRequest("Invalid HTML file.")
+
+    query_counts = {}
+    query_colors = {}
+
+    if queries:
+        try:
+            html_path, query_counts, query_colors = highlight_text_in_html(html_path, filename, queries, color_map=color_map)
+        except Exception as e:
+            print(e)
+
+    return filename, query_counts, query_colors
+
 
 
     
