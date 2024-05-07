@@ -103,7 +103,7 @@ def highlight_text_in_pdf(pdf_path, file_name, queries, color_map={}):
                     highlight.update()  # update annotation
                     query_counts[query] += 1
 
-            stemmed_query = clean_and_stem(query)[0]
+            stemmed_query = ''.join(clean_and_stem(query))
             if stemmed_query.lower() in text.lower():
                 for instance in page.search_for(stemmed_query):
                     highlight = page.add_highlight_annot(instance)
