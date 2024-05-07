@@ -103,6 +103,14 @@ def highlight_text_in_pdf(pdf_path, file_name, queries, color_map={}):
                     highlight.update()  # update annotation
                     query_counts[query] += 1
 
+            stemmed_query = clean_and_stem(query)[0]
+            if stemmed_query.lower() in text.lower():
+                for instance in page.search_for(stemmed_query):
+                    highlight = page.add_highlight_annot(instance)
+                    highlight.set_colors(stroke=fitz.pdfcolor[query_colors[query]])  # use preassigned color for each query
+                    highlight.update()  # update annotation
+                    query_counts[query] += 1
+
         output_pdf.insert_pdf(pdf_document, from_page=page_number, to_page=page_number)
 
     highlighted_pdf_path = os.path.join(settings.BASE_DIR, 'highlighted_pdfs', f'{file_name}_highlighted.pdf')

@@ -147,8 +147,12 @@ def fetch_document(request, doc_id):
         pdf_path = os.path.join(settings.BASE_DIR, 'highlighted_pdfs', f'{document.stored_file_name}_highlighted.pdf')
 
     elif document.stored_file_name.endswith(('.html', '.htm')):
-        html_path = os.path.join(settings.BASE_DIR, 'highlighted_pdfs', f'{document.stored_file_name}.html')
+        html_path = os.path.join(settings.BASE_DIR, 'corpus', f'{document.stored_file_name}')
         return FileResponse(open(html_path, 'rb'), content_type='text/html')
+    
+    elif document.stored_file_name.endswith(('.jpg', '.jpeg', '.png', '.bmp')):
+        html_path = os.path.join(settings.BASE_DIR, 'corpus', f'{document.stored_file_name}')
+        return FileResponse(open(html_path, 'rb'))
     
     else:
         pdf_path = os.path.join(settings.BASE_DIR, 'highlighted_pdfs', f'{document.stored_file_name}.pdf_highlighted.pdf')
@@ -182,14 +186,15 @@ def view_document(request, doc_id):
     query = request.GET.get('query', '')
     queries = query.split('|||')
 
+    document = get_object_or_404(CorpusFile, id=doc_id)
+
+    if document.stored_file_name.endswith(('.html', '.htm')):
+        return render(request, 'doc_viewer.html', {'doc_id': doc_id, 'query_info': []})
+    
+    if document.stored_file_name.endswith(('.jpg', '.jpeg', '.png', '.bmp')):
+        return render(request, 'doc_viewer.html', {'doc_id': doc_id, 'query_info': []})
+
     filename, query_counts, query_colors = load_document(doc_id, queries)
-
-    if filename.endswith(('.html', '.htm')):
-        html_path = os.path.join(settings.BASE_DIR, 'corpus', filename)
-        with open(html_path, 'r', encoding='utf-8') as f:
-            html_content = f.read()
-
-        return render(request, 'doc_viewer.html', {'doc_id': doc_id, 'query_info': [], 'html_content': html_content})
 
     query_info = []
     for query in queries:
