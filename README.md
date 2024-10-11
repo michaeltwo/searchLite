@@ -2,7 +2,8 @@
 
 # SearchLite: A Lightweight Search Engine for Document Retrieval
 
-SearchLite is a lightweight search engine designed to facilitate document retrieval based on free text queries. This project aims to provide a simple yet effective solution for searching through documents using natural language queries. It allows users to upload multiple documents of supported file types, search multiple queries, and filter the results. It also includes a document viewer that enables users to highlight terms in PDF documents.
+SearchLite is a lightweight search engine designed to facilitate document retrieval based on free text queries, specifically tailored for researchers navigating the vast landscape of academic literature. This project aims to provide a simple yet effective solution for searching through research papers and articles using natural language queries.
+With SearchLite, users can effortlessly upload multiple documents of supported file types, conduct searches across various queries, and filter the results to find relevant information quickly. The integrated document viewer allows users to highlight terms in PDF documents, making it easier to identify and read specific articles of interest. By streamlining the search process, SearchLite empowers researchers to efficiently gather and access the literature needed to support their studies, saving time and enhancing productivity.
 
 ## Features
 
