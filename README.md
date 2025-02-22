@@ -123,3 +123,4 @@ Certainly! Here's the list of technologies used in SearchLite in the requested f
 
 - [Alisha Bingewar](https://github.com/abingewar)
 - [Animesh Patil](https://github.com/apatil2332)
+- [Michael](https://github.com/michaeltwo)
